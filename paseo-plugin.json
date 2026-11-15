@@ -1,0 +1,21 @@
+{
+  "id": "project-groups",
+  "name": "Project groups",
+  "description": "Group projects in the sidebar, drag to reorder them, and give groups, projects and workspaces colors and icons.",
+  "icon": "assets/icon.png",
+  "media": [
+    "assets/screenshot-sidebar.png",
+    "assets/screenshot-drag.png",
+    "assets/screenshot-colors.png",
+    "assets/screenshot-settings.png"
+  ],
+  "requirements": {
+    "paseo": ">=0.16.0-beta.2"
+  },
+  "translations": {
+    "ko": {
+      "name": "프로젝트 그룹",
+      "description": "사이드바에서 프로젝트를 그룹으로 묶고, 끌어서 순서를 바꾸고, 색과 아이콘을 지정합니다."
+    }
+  }
+}
