@@ -15,7 +15,7 @@ A Paseo sidebar view that adds groups above projects. Drag projects between grou
 
 ## Requirements
 
-Paseo 0.16.0-beta.2 or later on both the daemon and the app, with plugins enabled.
+Paseo 0.16 or later on both the daemon and the app (0.16 betas included), with plugins enabled. Sidebar views were added in 0.16, so apps on 0.15 show the plugin as incompatible and keep the default sidebar.
 
 ## Install
 

@@ -2,7 +2,7 @@ Project groups is a sidebar view that adds a level above projects. Groups hold p
 
 ## Setup
 
-Requires Paseo 0.16.0-beta.2 or later on the daemon and the app. Choose Project groups in Settings, Sidebar, Sidebar view. Switching back to the default view restores the built-in sidebar, and your groups are kept.
+Requires Paseo 0.16 or later on the daemon and the app, including 0.16 beta builds, because sidebar views were added in 0.16. An app on an older version, such as a phone app on 0.15, shows the plugin as incompatible and keeps the default sidebar. Choose Project groups in Settings, Sidebar, Sidebar view. Switching back to the default view restores the built-in sidebar, and your groups are kept.
 
 ## Using it
 

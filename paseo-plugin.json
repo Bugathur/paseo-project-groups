@@ -10,7 +10,7 @@
     "assets/screenshot-settings.png"
   ],
   "requirements": {
-    "paseo": ">=0.16.0-beta.2"
+    "paseo": ">=0.16.0"
   },
   "translations": {
     "ko": {
