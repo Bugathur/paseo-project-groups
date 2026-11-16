@@ -4,6 +4,7 @@
   "description": "Group projects in the sidebar, drag to reorder them, and give groups, projects and workspaces colors and icons.",
   "icon": "assets/icon.png",
   "media": [
+    "assets/thumbnail.png",
     "assets/screenshot-sidebar.png",
     "assets/screenshot-drag.png",
     "assets/screenshot-colors.png",

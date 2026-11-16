@@ -1,7 +1,7 @@
 {
   "name": "paseo-project-groups",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Group projects in the Paseo sidebar, drag to reorder them, and give groups, projects and workspaces colors and icons.",
   "license": "MIT",
   "repository": {

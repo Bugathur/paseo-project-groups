@@ -2,7 +2,7 @@
 
 A Paseo sidebar view that adds groups above projects. Drag projects between groups, reorder groups and projects, and give groups, projects and workspaces their own colors and icons.
 
-![Sidebar with project groups](assets/screenshot-sidebar.png)
+![Project groups](assets/thumbnail.png)
 
 ## Features
 
