@@ -32,7 +32,8 @@ export function rowStyles(theme: Theme, look: Look) {
       minHeight: look.header,
       paddingLeft: 8,
       paddingRight: 8,
-      marginTop: look.groupGap,
+      // Space between groups comes from spacers in the list, so the first group stays at the top.
+      marginTop: 2,
       gap: 6,
     },
     groupName: {

@@ -22,7 +22,8 @@ export interface Look {
 }
 
 const ROW = { compact: 24, comfortable: 28, spacious: 34 } as const;
-const GROUP_GAP = { compact: 2, comfortable: 6, spacious: 10 } as const;
+/** Space between groups. "small" matches the spacing before this setting existed. */
+export const GROUP_GAP = { none: 0, small: 6, medium: 14, large: 24, xlarge: 36 } as const;
 const INDENT = {
   narrow: { project: 10, workspace: 26 },
   normal: { project: 16, workspace: 36 },
@@ -45,7 +46,7 @@ export function lookFrom(values: AppearanceValues): Look {
     icon: text + 1,
     row,
     header: row + 2,
-    groupGap: GROUP_GAP[values.density],
+    groupGap: GROUP_GAP[values.groupSpacing],
     projectIndent: indent.project,
     workspaceIndent: indent.workspace,
     emptyIndent: indent.project + 12,

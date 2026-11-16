@@ -38,6 +38,7 @@ export const layoutDocument = defineSettings({
 export const TEXT_SIZES = [11, 12, 13, 14, 15] as const;
 export const DENSITIES = ["compact", "comfortable", "spacious"] as const;
 export const INDENTS = ["narrow", "normal", "wide"] as const;
+export const GROUP_SPACINGS = ["none", "small", "medium", "large", "xlarge"] as const;
 export const LANGUAGES = ["auto", "en", "ko"] as const;
 
 /** Sidebar look. Device scope because text size and spacing depend on the screen. */
@@ -49,6 +50,8 @@ export const appearanceDocument = defineSettings({
     textSize: z.number().int().min(10).max(18).default(12),
     density: z.enum(DENSITIES).default("comfortable"),
     indent: z.enum(INDENTS).default("normal"),
+    /** Extra space between groups, separate from row height. */
+    groupSpacing: z.enum(GROUP_SPACINGS).default("small"),
     boldGroupNames: z.boolean().default(true),
     showProjectIcons: z.boolean().default(true),
     showStatusDots: z.boolean().default(true),

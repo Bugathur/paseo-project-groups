@@ -558,13 +558,14 @@ function GroupsList(view: PluginSidebarViewProps) {
                 </View>
               ) : null}
 
-              {groups.map((group) => {
+              {groups.map((group, index) => {
                 const members = group.projects
                   .map((key) => byKey.get(key))
                   .filter((reference): reference is ProjectRef => reference !== undefined);
                 const folded = collapsed.has(`g:${group.id}`);
                 return (
                   <Fragment key={group.id}>
+                    {index > 0 || pinned.length ? <View style={{ height: look.groupGap }} /> : null}
                     <GroupHeader
                       group={group}
                       count={members.length}
@@ -587,6 +588,7 @@ function GroupsList(view: PluginSidebarViewProps) {
                 );
               })}
 
+              {groups.length || pinned.length ? <View style={{ height: look.groupGap }} /> : null}
               <UngroupedHeader
                 count={ungrouped.length}
                 collapsed={collapsed.has(UNGROUPED_KEY)}

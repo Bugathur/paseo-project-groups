@@ -1,35 +1,55 @@
-Project groups is a sidebar view that adds a level above projects. Groups hold projects, and projects hold their workspaces. You can drag projects between groups, reorder projects inside a group, and drag group headers to reorder the groups.
+Paseo lists every project in one long column. Once you have a dozen or so, finding one means scrolling. This plugin lets you put projects into groups like Work, Clients or Side projects, and fold the groups you aren't using right now.
 
-## Setup
+## Turn it on after installing
 
-Requires Paseo 0.16 or later on the daemon and the app, including 0.16 beta builds, because sidebar views were added in 0.16. An app on an older version, such as a phone app on 0.15, shows the plugin as incompatible and keeps the default sidebar. Choose Project groups in Settings, Sidebar, Sidebar view. Switching back to the default view restores the built-in sidebar, and your groups are kept.
+Installing the plugin does not change the sidebar. Paseo only switches sidebar views when you pick one yourself.
 
-## Using it
+1. Open **Settings → Sidebar**.
+2. Set **View** to **Project groups**.
 
-- New group at the top of the list creates a group and opens its name for editing.
-- With a mouse, press a project row and drag it. Drop it on a group header to add it to the end of that group, or between two projects where the line appears. On touch screens, long-press the row first.
-- Projects that are not in a group appear under Ungrouped, sorted by name. Newly added projects appear there too.
-- The ⋯ menu on a project moves it to a group, starts a new workspace, copies its path, changes its icon and color, or removes the project.
-- The ⋯ menu on a workspace renames it, pins or unpins it, copies its path or branch name, sets its color, or archives it.
-- Deleting a group keeps its projects. They move to Ungrouped.
+The second screenshot shows both steps. To go back, set View to Default view. Your groups stay saved.
+
+## Making groups
+
+Click **New group** at the top of the sidebar and type a name. Then drag projects onto it.
+
+- Drop a project on a group header to add it to the end of that group.
+- Drop it between two projects to put it where the blue line shows.
+- Drag a group header to move the whole group.
+- On a phone, long-press a row before you drag it.
+- Projects you haven't sorted yet sit under Ungrouped. New projects land there too.
+- Deleting a group leaves its projects alone. They go back to Ungrouped.
+
+The ⋯ button on a project moves it to another group, starts a new workspace, copies its path or removes it. The ⋯ button on a workspace renames, pins, copies the path or branch, or archives it.
 
 ## Colors and icons
 
-Click a project's folder icon, a group's palette button, or Set color in a workspace menu. Pick one of 11 colors and, for groups and projects, one of 36 icons or any emoji. The color applies to both the name and the icon. These colors and icons are stored by the plugin and only show in this sidebar view. Paseo's own project icons do not change.
+Click a project's folder icon or a group's palette button. Pick one of 11 colors and one of 36 icons, or type an emoji. For a workspace, use Set color in its ⋯ menu. The color goes on the name and the icon.
 
-## Appearance and language
+Colors and icons only show in this view. Paseo's own project icons don't change.
 
-The sliders button next to New group opens the plugin settings. You can set the text size from 11 to 15 pt, the row spacing and the indentation, and turn bold group names, folder icons, status dots, changed-line counts and the Pinned section on or off. The plugin language can follow the app or be set to English or Korean. These settings are stored on each device.
+## Settings
 
-## Data and permissions
+The sliders button next to New group opens the plugin's settings. You can change:
 
-Groups, their order, and the chosen colors and icons are stored in the plugin's settings on the daemon, so every app connected to that daemon shows the same groups. Folding state is stored on each device. The plugin makes no network requests.
+- text size, from 11 to 15 pt
+- row height
+- space between groups, from none to extra large
+- how far projects and workspaces are indented
+- whether group names are bold
+- which details show: folder icons, status dots, changed-line counts, the Pinned section
+- the language: same as the app, English or Korean
 
-Removing a project runs `paseo project delete` on the daemon host, because the plugin API has no call for it. The plugin first checks that the project belongs to that daemon. Paseo archives the project's workspaces and leaves the project folder on disk. Worktree folders that Paseo created can be deleted when their workspaces are archived, and the confirmation dialog warns about this first. Projects from other connected hosts cannot be removed from this menu.
+Settings are saved per device, so your phone and your computer can look different.
+
+## What it stores
+
+Groups, their order, colors and icons are saved in the plugin's settings on the daemon. Every app connected to that daemon sees the same groups. Which groups are folded is saved per device. The plugin makes no network requests.
+
+Removing a project runs `paseo project delete` on the daemon's machine, because the plugin API has no call for it. Paseo archives the project's workspaces and leaves the project folder on disk. Worktrees that Paseo created for those workspaces can be deleted when they are archived. The confirm dialog tells you this before anything happens.
 
 ## Limits
 
-- Workspaces cannot be dragged, because each workspace belongs to its project's folder.
-- Pinned workspaces appear in the Pinned section unless you turn that section off.
-- Removing the plugin deletes its stored groups, colors and icons.
-- Dragging on touch screens has not been tested on a physical phone.
+- Don't uninstall the plugin to update it. Uninstalling deletes your groups, colors and icons. Update it from the Plugins page or with `paseo plugin update project-groups`.
+- Workspaces can't be dragged, because each one belongs to its project's folder.
+- The daemon and the app both need Paseo 0.16 or later. Older apps show the plugin as incompatible and keep the default sidebar.

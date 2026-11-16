@@ -12,6 +12,7 @@ import { Text, View } from "react-native";
 import {
   appearanceDocument,
   DENSITIES,
+  GROUP_SPACINGS,
   INDENTS,
   LANGUAGES,
   TEXT_SIZES,
@@ -79,6 +80,12 @@ function Preview({ values, theme }: { values: AppearanceValues; theme: PluginSur
         {look.showProjectIcons ? <Icon name="Folder" size={look.icon} color={muted} /> : null}
         <Text style={styles.projectName}>api-server</Text>
         <Text style={styles.detail}>3</Text>
+      </View>
+      <View style={{ height: look.groupGap }} />
+      <View style={styles.header}>
+        <Icon name="ChevronRight" size={look.icon - 1} color={muted} />
+        <Text style={styles.groupName}>{t("settings.sampleGroup2")}</Text>
+        <Text style={styles.detail}>4</Text>
       </View>
     </View>
   );
@@ -155,6 +162,16 @@ export function AppearanceSettings({ theme }: PluginSurfaceProps) {
               label: t(`settings.densities.${density}`),
             }))}
             onValueChange={(density) => update({ density })}
+          />
+          <SettingsSelect
+            label={t("settings.groupSpacing")}
+            hint={t("settings.groupSpacingHint")}
+            value={values.groupSpacing}
+            options={GROUP_SPACINGS.map((spacing) => ({
+              value: spacing,
+              label: t(`settings.groupSpacings.${spacing}`),
+            }))}
+            onValueChange={(groupSpacing) => update({ groupSpacing })}
           />
           <SettingsSelect
             label={t("settings.indent")}
