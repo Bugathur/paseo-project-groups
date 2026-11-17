@@ -25,7 +25,7 @@ Installing does not change the sidebar. Open **Settings → Sidebar** and set **
 - Put a project under another project from its ⋯ menu (one level deep).
 - Give groups and projects a color and an icon or emoji. Workspaces get a color.
 - Projects use their Paseo image unless you choose a plugin icon or emoji.
-- Folded projects and groups show the most urgent workspace status on their icon.
+- Folded projects and groups show the most urgent workspace status on their icon, and a light fill when they hold the workspace you have open.
 - Use the ⋯ menus to move, rename, pin, archive or remove things.
 - Change text size, row height, space between groups and indentation per device.
 - Read the plugin in English, Korean or Simplified Chinese.

@@ -333,14 +333,18 @@ function GroupsList(view: PluginSidebarViewProps) {
   const ungrouped = useMemo(() => refsOf(layout.ungrouped), [layout, refsOf]);
   const ungroupedKeys = useMemo(() => withSubProjects(layout.ungrouped), [layout, withSubProjects]);
 
+  /**
+   * `quiet` is for the automatic cleanup of removed parents. Another device may run the same
+   * cleanup first; its save then wins and this one conflicts, though the groups are already right.
+   */
   const savePlacement = useCallback(
-    async (next: Placement) => {
+    async (next: Placement, { quiet = false }: { quiet?: boolean } = {}) => {
       if (groupsState.status !== "ready") return;
       setPendingPlacement(next);
       const saved = await groupsSaver.save(next);
       if (!saved) {
         setPendingPlacement(null);
-        toast.error(t("toast.groupsSaveFailed"));
+        if (!quiet) toast.error(t("toast.groupsSaveFailed"));
       }
     },
     [groupsSaver, groupsState.status, t, toast],
@@ -579,7 +583,7 @@ function GroupsList(view: PluginSidebarViewProps) {
           if (!gone.length) return;
           const { groups, parents, order, savePlacement } = latest.current;
           const next = dropProjects(groups, parents, gone, order);
-          if (next) void savePlacement(next);
+          if (next) void savePlacement(next, { quiet: true });
         },
         () => {
           if (!cancelled) retry = setTimeout(() => setParentCheck((count) => count + 1), PARENT_CHECK_RETRY_MS);

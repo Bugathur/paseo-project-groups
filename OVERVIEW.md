@@ -20,7 +20,9 @@ Click **New group** at the top of the sidebar and type a name. Then drag project
 - Projects you haven't sorted yet sit under Ungrouped. New projects land there too.
 - Deleting a group leaves its projects alone. They go back to Ungrouped.
 
-Folding a project or group hides its workspaces but not their status. The folded row shows the most urgent one on its icon: needs input, failed, running, or ready to review. Ungrouped does the same.
+Folding a project or group hides its workspaces but not their status. The folded row shows the most urgent one on its icon: needs input, failed, running, or ready to review. Ungrouped does the same. If the workspace you have open is inside, the folded row also gets a light fill, so you can see where it went.
+
+The ⋯ button on a project moves it to another group, puts it under another project, starts a new workspace, copies its path or removes it. The ⋯ button on a workspace renames, pins, copies the path or branch, or archives it.
 
 ## Sub-projects
 
@@ -31,8 +33,6 @@ A project can sit under another project, for example a folder of plugins under t
 - Only one level: a project that has sub-projects can't go under another one.
 - To take it out, pick **Back to top level** in the same menu. It lands right after its parent. Moving it to a group, or dragging it to one, works too.
 - If the parent is removed, its sub-projects take its place in its group.
-
-The ⋯ button on a project moves it to another group, starts a new workspace, copies its path or removes it. The ⋯ button on a workspace renames, pins, copies the path or branch, or archives it.
 
 ## Colors and icons
 
@@ -61,6 +61,8 @@ Settings are saved per device, so your phone and your computer can look differen
 Groups, their order, colors and icons are saved in the plugin's settings on the daemon. Every app connected to that daemon sees the same groups. Which groups are folded is saved per device. Project images come from the daemon running the plugin, over a local connection that uses Paseo's own installed modules. Nothing goes to an outside service. When an image can't be read, the folder icon shows instead.
 
 Removing a project runs `paseo project delete` on the daemon's machine, because the plugin API has no call for it. Paseo archives the project's workspaces and leaves the project folder on disk. Worktrees that Paseo created for those workspaces can be deleted when they are archived. The confirm dialog tells you this before anything happens.
+
+When a sub-project's parent disappears from the list, the plugin asks the daemon with `paseo project ls` whether the parent still exists. It cleans up only when the daemon says the parent is gone, so a list that is still loading never loses your nesting.
 
 ## Limits
 
