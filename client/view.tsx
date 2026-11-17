@@ -39,6 +39,7 @@ import { DEFAULT_APPEARANCE, LookContext, lookFrom, useLook, useViewActions } fr
 import { ProjectIcon } from "./project-icon";
 import {
   addGroup,
+  groupOfProject,
   moveGroup,
   moveProject,
   nextGroupName,
@@ -57,6 +58,7 @@ import {
   WorkspaceRow,
   useRowStyles,
 } from "./rows";
+import { useSettingsSaver } from "./save";
 
 const UNGROUPED_KEY = "u";
 const EMPTY_GROUPS: readonly ProjectGroup[] = [];
@@ -257,17 +259,28 @@ function GroupsList(view: PluginSidebarViewProps) {
   const look = useLook();
   const styles = useRowStyles(view.theme);
 
-  // Optimistic copies make drops and folding feel instant; they clear when the saved
-  // revision arrives or the save fails.
+  const groupsSaver = useSettingsSaver(groupsState);
+  const layoutSaver = useSettingsSaver(layoutState);
+  const decorationsSaver = useSettingsSaver(decorationsState);
+
+  // Optimistic copies make drops and folding feel instant. They clear when a new revision
+  // arrives with no save left in flight, or when a save fails. Clearing between two queued
+  // saves would briefly show the first save without the second.
   const [pendingGroups, setPendingGroups] = useState<ProjectGroup[] | null>(null);
   const [pendingCollapsed, setPendingCollapsed] = useState<string[] | null>(null);
   const groupsRevision = groupsState.status === "ready" ? groupsState.revision : null;
   const layoutRevision = layoutState.status === "ready" ? layoutState.revision : null;
-  useEffect(() => setPendingGroups(null), [groupsRevision]);
-  useEffect(() => setPendingCollapsed(null), [layoutRevision]);
+  useEffect(() => {
+    if (!groupsSaver.busy()) setPendingGroups(null);
+  }, [groupsRevision, groupsSaver]);
+  useEffect(() => {
+    if (!layoutSaver.busy()) setPendingCollapsed(null);
+  }, [layoutRevision, layoutSaver]);
   const [pendingDecorations, setPendingDecorations] = useState<DecorationsValues | null>(null);
   const decorationsRevision = decorationsState.status === "ready" ? decorationsState.revision : null;
-  useEffect(() => setPendingDecorations(null), [decorationsRevision]);
+  useEffect(() => {
+    if (!decorationsSaver.busy()) setPendingDecorations(null);
+  }, [decorationsRevision, decorationsSaver]);
   const decorationValues: DecorationsValues =
     pendingDecorations ?? (decorationsState.status === "ready" ? decorationsState.values : EMPTY_DECORATIONS);
 
@@ -300,13 +313,13 @@ function GroupsList(view: PluginSidebarViewProps) {
     async (next: ProjectGroup[]) => {
       if (groupsState.status !== "ready") return;
       setPendingGroups(next);
-      const saved = await groupsState.save({ groups: next }, groupsState.revision);
+      const saved = await groupsSaver.save({ groups: next });
       if (!saved) {
         setPendingGroups(null);
         toast.error(t("toast.groupsSaveFailed"));
       }
     },
-    [groupsState, t, toast],
+    [groupsSaver, groupsState.status, t, toast],
   );
 
   const saveDecorations = useCallback(
@@ -316,13 +329,13 @@ function GroupsList(view: PluginSidebarViewProps) {
         return;
       }
       setPendingDecorations(next);
-      const saved = await decorationsState.save(next, decorationsState.revision);
+      const saved = await decorationsSaver.save(next);
       if (!saved) {
         setPendingDecorations(null);
         toast.error(t("toast.looksSaveFailed"));
       }
     },
-    [decorationsState, t, toast],
+    [decorationsSaver, decorationsState.status, t, toast],
   );
 
   /** Returns the document with one entry replaced, or removed when it is back to defaults. */
@@ -376,11 +389,11 @@ function GroupsList(view: PluginSidebarViewProps) {
         ? collapsedList.filter((item) => item !== key)
         : [...collapsedList, key];
       setPendingCollapsed(next);
-      void layoutState.save({ collapsed: next }, layoutState.revision).then((saved) => {
+      void layoutSaver.save({ collapsed: next }).then((saved) => {
         if (!saved) setPendingCollapsed(null);
       });
     },
-    [collapsed, collapsedList, layoutState],
+    [collapsed, collapsedList, layoutSaver, layoutState.status],
   );
   const toggleGroup = useCallback((id: string) => toggle(`g:${id}`), [toggle]);
   const toggleProject = useCallback((key: string) => toggle(`p:${key}`), [toggle]);
@@ -455,6 +468,8 @@ function GroupsList(view: PluginSidebarViewProps) {
   const chooseGroup = useCallback(
     (reference: ProjectRef, groupId: string | null) => {
       setDialog(null);
+      // Picking the group the project is already in must not move it to the end.
+      if (groupOfProject(groups, reference.key) === groupId) return;
       const next = moveProject(
         groups,
         reference.key,

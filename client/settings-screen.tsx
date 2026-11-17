@@ -7,7 +7,7 @@ import {
   SettingsSelect,
   SettingsSwitch,
 } from "@getpaseo/plugin/client/ui";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Text, View } from "react-native";
 import {
   appearanceDocument,
@@ -21,6 +21,7 @@ import {
 import { useT } from "./i18n";
 import { DEFAULT_APPEARANCE, lookFrom } from "./look";
 import { Badged, rowStyles, StatusDot } from "./rows";
+import { useSettingsSaver } from "./save";
 
 /** Each language is named in its own language so it can be found in any locale. */
 const LANGUAGE_NAMES = { en: "English", ko: "한국어", "zh-CN": "简体中文" } as const;
@@ -95,7 +96,14 @@ function Preview({ values, theme }: { values: AppearanceValues; theme: PluginSur
 
 export function AppearanceSettings({ theme }: PluginSurfaceProps) {
   const settings = useSettings(appearanceDocument);
+  const saver = useSettingsSaver(settings);
   const t = useT();
+  // Shows each change at once and lets a second quick change build on the first one.
+  const [pending, setPending] = useState<AppearanceValues | null>(null);
+  const revision = settings.status === "ready" ? settings.revision : null;
+  useEffect(() => {
+    if (!saver.busy()) setPending(null);
+  }, [revision, saver]);
 
   if (settings.status === "loading") {
     return <Text style={{ color: theme.colors.foregroundMuted }}>{t("settings.loading")}</Text>;
@@ -115,9 +123,14 @@ export function AppearanceSettings({ theme }: PluginSurfaceProps) {
     );
   }
 
-  const values = settings.values;
-  const update = (patch: Partial<AppearanceValues>) =>
-    void settings.save({ ...values, ...patch }, settings.revision);
+  const values = pending ?? settings.values;
+  const update = (patch: Partial<AppearanceValues>) => {
+    const next = { ...values, ...patch };
+    setPending(next);
+    void saver.save(next).then((saved) => {
+      if (!saved) setPending(null);
+    });
+  };
 
   return (
     <View style={{ gap: 24 }}>
@@ -229,9 +242,7 @@ export function AppearanceSettings({ theme }: PluginSurfaceProps) {
             label={t("settings.resetLabel")}
             actionLabel={t("settings.resetAction")}
             // Keep the chosen language; reset only covers the look.
-            onPress={() =>
-              void settings.save({ ...DEFAULT_APPEARANCE, language: values.language }, settings.revision)
-            }
+            onPress={() => update({ ...DEFAULT_APPEARANCE, language: values.language })}
           />
         </SettingsCard>
       </SettingsSection>

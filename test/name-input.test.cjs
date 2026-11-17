@@ -80,7 +80,7 @@ const inputOf = (renderer) =>
 const button = (renderer, label) =>
   renderer.root.findByProps({ accessibilityLabel: label, accessibilityRole: "button" });
 
-async function workspaceEditor(onRender = noop) {
+async function workspaceEditor(onRender = noop, overrides = {}) {
   const titles = [];
   let closed = 0;
   const workspace = {
@@ -89,6 +89,7 @@ async function workspaceEditor(onRender = noop) {
     directory: "/project",
     pinned: false,
     worktree: false,
+    ...overrides,
   };
   const { WorkspaceMenuDialog } = loadClient("dialogs.tsx", {
     useWorkspace: (_reference, _selector) => workspace,
@@ -158,6 +159,24 @@ test("workspace Return saves and an empty name restores the default", async (t) 
   await act(() => inputOf(renderer).props.onChangeText("   "));
   await act(() => inputOf(renderer).props.onSubmitEditing());
   assert.deepEqual(titles, [null]);
+});
+
+test("saving an unchanged name does not pin the automatic name", async (t) => {
+  const { renderer, titles, closed } = await workspaceEditor(noop, { title: "feature-x", customTitle: null });
+  t.after(async () => act(() => renderer.unmount()));
+  assert.equal(inputOf(renderer).props.defaultValue, "feature-x");
+  await act(() => button(renderer, "common.save").props.onPress());
+  assert.deepEqual(titles, []);
+  assert.equal(closed(), 1);
+});
+
+test("saving an unchanged custom name sends nothing", async (t) => {
+  const { renderer, titles, closed } = await workspaceEditor();
+  t.after(async () => act(() => renderer.unmount()));
+  await act(() => inputOf(renderer).props.onChangeText(" Original "));
+  await act(() => inputOf(renderer).props.onSubmitEditing());
+  assert.deepEqual(titles, []);
+  assert.equal(closed(), 1);
 });
 
 test("workspace cancel does not save the draft", async (t) => {

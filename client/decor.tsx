@@ -1,9 +1,10 @@
 import type { PluginSidebarViewProps } from "@getpaseo/plugin/client";
-import { Icon, Modal } from "@getpaseo/plugin/client/ui";
+import { Icon, Modal, TextInput } from "@getpaseo/plugin/client/ui";
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import type { Decoration, DecorationKind, DecorationsValues } from "../shared/settings";
 import { useT } from "./i18n";
+import { firstGraphemes } from "./text";
 
 type Theme = PluginSidebarViewProps["theme"];
 
@@ -84,6 +85,8 @@ export function DecorIcon({
     return (
       <Text
         selectable={false}
+        // Older versions stored up to 8 characters; keep those on one line instead of wrapping.
+        numberOfLines={1}
         style={{ fontSize: size - 1, lineHeight: size + 3, width: size + 2, textAlign: "center" }}
       >
         {icon.slice("emoji:".length)}
@@ -220,7 +223,16 @@ export function DecorateDialog({
 }) {
   const t = useT();
   const [draft, setDraft] = useState<Decoration>(initial);
-  const [emoji, setEmoji] = useState(initial.icon?.startsWith("emoji:") ? initial.icon.slice(6) : "");
+  // The emoji field is uncontrolled so phone keyboards can compose text undisturbed. Picking a
+  // listed icon clears it by remounting it with an empty seed.
+  const [emojiSeed, setEmojiSeed] = useState(
+    initial.icon?.startsWith("emoji:") ? initial.icon.slice(6) : "",
+  );
+  const [emojiField, setEmojiField] = useState(0);
+  const clearEmojiField = () => {
+    setEmojiSeed("");
+    setEmojiField((field) => field + 1);
+  };
   const withIcon = target.kind !== "workspaces";
   const fallback = target.kind === "projects" ? "Folder" : null;
   const iconColor = draft.color ?? theme.colors.foregroundMuted;
@@ -230,8 +242,8 @@ export function DecorateDialog({
       : t("decorate.titleWithIcon", { name: target.name });
 
   const setEmojiIcon = (text: string) => {
-    const value = text.trim().slice(0, 8);
-    setEmoji(value);
+    // The icon slot holds one character, so keep the first whole emoji or letter.
+    const value = firstGraphemes(text.trim(), 1);
     setDraft((current) => ({
       ...current,
       icon: value ? `emoji:${value}` : current.icon?.startsWith("emoji:") ? null : current.icon,
@@ -295,7 +307,7 @@ export function DecorateDialog({
                 selected={draft.icon === null}
                 theme={theme}
                 onPress={() => {
-                  setEmoji("");
+                  clearEmojiField();
                   setDraft((current) => ({ ...current, icon: null }));
                 }}
               >
@@ -312,7 +324,7 @@ export function DecorateDialog({
                   selected={draft.icon === `lucide:${name}`}
                   theme={theme}
                   onPress={() => {
-                    setEmoji("");
+                    clearEmojiField();
                     setDraft((current) => ({ ...current, icon: `lucide:${name}` }));
                   }}
                 >
@@ -321,8 +333,9 @@ export function DecorateDialog({
               ))}
             </View>
             <TextInput
+              key={emojiField}
               accessibilityLabel={t("decorate.emojiLabel")}
-              value={emoji}
+              defaultValue={emojiSeed}
               onChangeText={setEmojiIcon}
               placeholder={t("decorate.emojiPlaceholder")}
               placeholderTextColor={theme.colors.foregroundMuted}
@@ -345,7 +358,7 @@ export function DecorateDialog({
             accessibilityRole="button"
             accessibilityLabel={t("decorate.reset")}
             onPress={() => {
-              setEmoji("");
+              clearEmojiField();
               setDraft({ color: null, icon: null });
             }}
             style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, marginRight: "auto" }}

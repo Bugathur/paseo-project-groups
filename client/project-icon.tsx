@@ -26,7 +26,9 @@ export function ProjectIcon({
     queryFn: () => readIcon({ hostId: reference.hostId, projectId: reference.id }),
     enabled: !icon,
     staleTime: Infinity,
-    retry: false,
+    // A read can fail while the plugin is starting or reloading; try again before falling back.
+    retry: 2,
+    retryDelay: (attempt) => 1000 * 2 ** attempt,
   });
   const fallback = <DecorIcon icon={icon} fallback="Folder" color={color} size={size} />;
   if (icon || !query.data?.icon) return fallback;

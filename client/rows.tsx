@@ -167,8 +167,22 @@ function RowActions({
   );
 }
 
-/** Hover state on desktop; touch layouts always show row actions. */
-function useHover(alwaysShow: boolean) {
+/**
+ * True when the browser's main pointer cannot hover, as on phones and tablets. Called on the
+ * global object itself because a detached `matchMedia` throws in browsers.
+ */
+const CANNOT_HOVER = (() => {
+  const target = globalThis as { matchMedia?: (query: string) => { matches: boolean } };
+  return typeof target.matchMedia === "function" && target.matchMedia("(hover: none)").matches;
+})();
+
+/**
+ * Hover state for row actions. Wherever hover cannot happen (narrow layouts, the native apps,
+ * touch-only browsers such as a tablet) the actions always show, because they stay pressable
+ * while faded and would otherwise be invisible buttons.
+ */
+function useHover(layout: PluginSidebarViewProps["layout"]) {
+  const alwaysShow = layout.compact || layout.platform !== "web" || CANNOT_HOVER;
   const [hovered, setHovered] = useState(false);
   const onHoverIn = useCallback(() => setHovered(true), []);
   const onHoverOut = useCallback(() => setHovered(false), []);
@@ -205,7 +219,7 @@ export function GroupHeader({
   const controller = useDrag();
   const slotRef = useDragSlot(`g:${group.id}`, { kind: "group", groupId: group.id });
   const handle = useDragHandle({ kind: "group", id: group.id, label: group.name });
-  const hover = useHover(view.layout.compact);
+  const hover = useHover(view.layout);
   const [initialName, setInitialName] = useState(group.name);
   const draftName = useRef(group.name);
   const muted = view.theme.colors.foregroundMuted;
@@ -546,7 +560,7 @@ export function WorkspaceRow({
 }) {
   const look = useLook();
   const styles = useRowStyles(view.theme);
-  const hover = useHover(view.layout.compact);
+  const hover = useHover(view.layout);
   const t = useT();
   const nameColor = useDecorations().get("workspaces", reference.key).color;
   const workspace = useWorkspace(reference, (item) => ({
@@ -637,7 +651,7 @@ export function ProjectBlock({
     groupId,
   });
   const handle = useDragHandle({ kind: "project", key: reference.key, label: name });
-  const hover = useHover(view.layout.compact);
+  const hover = useHover(view.layout);
   const muted = view.theme.colors.foregroundMuted;
   const t = useT();
   const decorations = useDecorations();

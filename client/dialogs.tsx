@@ -322,12 +322,12 @@ export function WorkspaceMenuDialog({
   };
 
   if (step === "rename") {
-    const submit = () =>
-      void run(
-        () => handle().setTitle(draftName.current.trim() || null),
-        t("workspace.renamed"),
-        t("workspace.renameFailed"),
-      );
+    const submit = () => {
+      const next = draftName.current.trim() || null;
+      // Saving the name unchanged would pin an automatic name as a fixed title.
+      if (next === (initialName.trim() || null)) return onClose();
+      void run(() => handle().setTitle(next), t("workspace.renamed"), t("workspace.renameFailed"));
+    };
     return (
       <Modal title={t("workspace.renameTitle")} open onOpenChange={closeOnDismiss(onClose)}>
         <Modal.Content>

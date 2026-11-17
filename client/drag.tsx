@@ -172,6 +172,9 @@ export function useDragController(
       measuring = true;
       setSubject(next);
       setHit(null);
+      // A browser ends the row press, which unlocks scrolling, just before this grant. Lock
+      // again so the list does not scroll under a finger that is dragging.
+      if (!mousePress) setScrollLocked(true);
       const entries = [...nodes.values()];
       let remaining = entries.length;
       const finish = () => {
