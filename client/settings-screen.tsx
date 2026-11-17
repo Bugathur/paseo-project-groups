@@ -211,6 +211,12 @@ export function AppearanceSettings({ theme }: PluginSurfaceProps) {
             onValueChange={(showProjectIcons) => update({ showProjectIcons })}
           />
           <SettingsSwitch
+            label={t("settings.hostTags")}
+            hint={t("settings.hostTagsHint")}
+            value={values.showHostTags}
+            onValueChange={(showHostTags) => update({ showHostTags })}
+          />
+          <SettingsSwitch
             label={t("settings.statusDots")}
             hint={t("settings.statusDotsHint")}
             value={values.showStatusDots}

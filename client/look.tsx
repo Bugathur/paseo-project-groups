@@ -16,6 +16,7 @@ export interface Look {
   emptyIndent: number;
   boldGroupNames: boolean;
   showProjectIcons: boolean;
+  showHostTags: boolean;
   showStatusDots: boolean;
   showFoldedStatus: boolean;
   showDiffStats: boolean;
@@ -53,6 +54,7 @@ export function lookFrom(values: AppearanceValues): Look {
     emptyIndent: indent.project + 12,
     boldGroupNames: values.boldGroupNames,
     showProjectIcons: values.showProjectIcons,
+    showHostTags: values.showHostTags,
     showStatusDots: values.showStatusDots,
     showFoldedStatus: values.showFoldedStatus,
     showDiffStats: values.showDiffStats,

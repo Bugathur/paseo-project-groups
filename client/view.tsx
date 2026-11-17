@@ -731,7 +731,7 @@ function GroupsList(view: PluginSidebarViewProps) {
         onMenu={openProjectMenu}
         onWorkspaceMenu={openWorkspaceMenu}
         // Inside a host's own Ungrouped section the header already names the host.
-        hostLabel={multiHost && groupId !== null ? hostLabel(reference.hostId) : null}
+        hostLabel={multiHost && look.showHostTags && groupId !== null ? hostLabel(reference.hostId) : null}
       >
         {children.map((child) => projectBlock(child, groupId, true))}
       </ProjectBlock>

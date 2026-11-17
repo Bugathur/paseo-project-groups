@@ -56,6 +56,8 @@ export const appearanceDocument = defineSettings({
     groupSpacing: z.enum(GROUP_SPACINGS).default("small"),
     boldGroupNames: z.boolean().default(true),
     showProjectIcons: z.boolean().default(true),
+    /** With several hosts connected, a host name tag after each project in a group. */
+    showHostTags: z.boolean().default(true),
     showStatusDots: z.boolean().default(true),
     /** A folded project or group shows its most urgent workspace status on its icon. */
     showFoldedStatus: z.boolean().default(true),
