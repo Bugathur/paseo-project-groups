@@ -34,6 +34,16 @@ A project can sit under another project, for example a folder of plugins under t
 - To take it out, pick **Back to top level** in the same menu. It lands right after its parent. Moving it to a group, or dragging it to one, works too.
 - If the parent is removed, its sub-projects take its place in its group.
 
+## Several hosts
+
+When the app is connected to more than one host, projects from all of them show in this view.
+
+- Ungrouped splits into one section per host, such as "Ungrouped · Mac". A new project lands in its own host's section.
+- Projects inside groups get a small host tag after their name, so two projects with the same name can be told apart. Turn the tags off with **Host name tags** in the settings.
+- A group can hold projects from different hosts. A project's host never changes, so dropping it on another host's Ungrouped sends it back to its own.
+- Tags use the host names from Paseo's settings. If two hosts look the same, rename one under **Settings → Host → Overview**.
+- Groups are saved on the host that provides this view. While another host is offline, its projects are hidden, and they come back in the same place when it reconnects.
+
 ## Colors and icons
 
 Projects show the image you gave them in Paseo, or a folder when they have none.
@@ -51,7 +61,7 @@ The sliders button next to New group opens the plugin's settings. You can change
 - space between groups, from none to extra large
 - how far projects and workspaces are indented
 - whether group names are bold
-- which details show: project icons, status dots, status on folded rows, changed-line counts, the Pinned section
+- which details show: project icons, host name tags, status dots, status on folded rows, changed-line counts, the Pinned section
 - the language: same as the app, English, Korean or Simplified Chinese
 
 Settings are saved per device, so your phone and your computer can look different.
@@ -62,7 +72,7 @@ Groups, their order, colors and icons are saved in the plugin's settings on the 
 
 Removing a project runs `paseo project delete` on the daemon's machine, because the plugin API has no call for it. Paseo archives the project's workspaces and leaves the project folder on disk. Worktrees that Paseo created for those workspaces can be deleted when they are archived. The confirm dialog tells you this before anything happens.
 
-When a sub-project's parent disappears from the list, the plugin asks the daemon with `paseo project ls` whether the parent still exists. It cleans up only when the daemon says the parent is gone, so a list that is still loading never loses your nesting.
+When a sub-project's parent disappears from the list, the plugin asks the daemon with `paseo daemon status` and `paseo project ls` whether the parent still exists. It cleans up only when the daemon says the parent is gone, so a list that is still loading never loses your nesting.
 
 ## Limits
 

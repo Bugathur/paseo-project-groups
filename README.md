@@ -23,6 +23,7 @@ Installing does not change the sidebar. Open **Settings → Sidebar** and set **
 - Make groups with **New group** at the top of the sidebar, then drag projects into them.
 - Drag group headers to reorder groups. Fold the ones you aren't using.
 - Put a project under another project from its ⋯ menu (one level deep).
+- With several hosts connected, Ungrouped splits by host and grouped projects show a host tag.
 - Give groups and projects a color and an icon or emoji. Workspaces get a color.
 - Projects use their Paseo image unless you choose a plugin icon or emoji.
 - Folded projects and groups show the most urgent workspace status on their icon, and a light fill when they hold the workspace you have open.
@@ -38,7 +39,7 @@ Paseo 0.16 or later on both the daemon and the app, with plugins enabled. Sideba
 
 ## Data
 
-Groups, colors and icons are saved in the plugin's settings on the daemon, so every connected app sees the same groups. Appearance and folding are saved per device. Removing a project runs `paseo project delete` on the daemon's machine, since the plugin API has no call for it. When a sub-project's parent is missing from the list, the plugin asks that daemon (through `paseo project ls`) whether the parent still exists, and cleans up only when the daemon says it doesn't. Project icons are read from that daemon over a local connection; no external service is contacted.
+Groups, colors and icons are saved in the plugin's settings on the daemon, so every connected app sees the same groups. Appearance and folding are saved per device. Removing a project runs `paseo project delete` on the daemon's machine, since the plugin API has no call for it. When a sub-project's parent is missing from the list, the plugin asks that daemon (with `paseo daemon status` and `paseo project ls`) whether the parent still exists, and cleans up only when the daemon says it doesn't. Project icons are read from that daemon over a local connection; no external service is contacted.
 
 Uninstalling the plugin deletes the saved groups. To get a new version, use `paseo plugin update project-groups` instead.
 
@@ -47,6 +48,7 @@ Uninstalling the plugin deletes the saved groups. To get a new version, use `pas
 ```bash
 npm install
 npm run typecheck
+npm test
 paseo plugin install "$PWD"
 paseo plugin reload project-groups
 ```
