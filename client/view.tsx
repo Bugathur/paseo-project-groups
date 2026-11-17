@@ -8,9 +8,9 @@ import {
   type WorkspaceRef,
 } from "@getpaseo/plugin/client";
 import { Icon, ScrollView, useToast } from "@getpaseo/plugin/client/ui";
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Animated, Pressable, Text, View, type ScrollView as NativeScrollView } from "react-native";
-import { removeProjectRpc } from "../shared/rpc";
+import { projectIdsRpc, removeProjectRpc } from "../shared/rpc";
 import {
   appearanceDocument,
   decorationsDocument,
@@ -39,14 +39,22 @@ import { DEFAULT_APPEARANCE, LookContext, lookFrom, useLook, useViewActions } fr
 import { ProjectIcon } from "./project-icon";
 import {
   addGroup,
+  canNest,
+  dropProjects,
   groupOfProject,
   moveGroup,
-  moveProject,
+  nestProject,
   nextGroupName,
+  placeProject,
+  parseProjectKey,
   removeGroup,
   renameGroup,
+  sectionOf,
+  sidebarLayout,
   type DragSubject,
   type DropTarget,
+  type Parents,
+  type Placement,
 } from "./model";
 import {
   EmptyGroupRow,
@@ -63,6 +71,10 @@ import { useSettingsSaver } from "./save";
 const UNGROUPED_KEY = "u";
 const EMPTY_GROUPS: readonly ProjectGroup[] = [];
 const EMPTY_KEYS: readonly string[] = [];
+const EMPTY_PARENTS: Parents = {};
+/** Startup and reconnects settle before a missing parent is checked with the daemon. */
+const PARENT_CHECK_DELAY_MS = 3000;
+const PARENT_CHECK_RETRY_MS = 30_000;
 const EMPTY_DECORATIONS: DecorationsValues = { groups: {}, projects: {}, workspaces: {} };
 
 type Theme = PluginSidebarViewProps["theme"];
@@ -254,6 +266,7 @@ function GroupsList(view: PluginSidebarViewProps) {
   const layoutState = useSettings(layoutDocument);
   const decorationsState = useSettings(decorationsDocument);
   const removeProjectCall = useRpc(removeProjectRpc);
+  const projectIdsCall = useRpc(projectIdsRpc);
   const toast = useToast();
   const t = useT();
   const look = useLook();
@@ -266,12 +279,12 @@ function GroupsList(view: PluginSidebarViewProps) {
   // Optimistic copies make drops and folding feel instant. They clear when a new revision
   // arrives with no save left in flight, or when a save fails. Clearing between two queued
   // saves would briefly show the first save without the second.
-  const [pendingGroups, setPendingGroups] = useState<ProjectGroup[] | null>(null);
+  const [pendingPlacement, setPendingPlacement] = useState<Placement | null>(null);
   const [pendingCollapsed, setPendingCollapsed] = useState<string[] | null>(null);
   const groupsRevision = groupsState.status === "ready" ? groupsState.revision : null;
   const layoutRevision = layoutState.status === "ready" ? layoutState.revision : null;
   useEffect(() => {
-    if (!groupsSaver.busy()) setPendingGroups(null);
+    if (!groupsSaver.busy()) setPendingPlacement(null);
   }, [groupsRevision, groupsSaver]);
   useEffect(() => {
     if (!layoutSaver.busy()) setPendingCollapsed(null);
@@ -285,7 +298,9 @@ function GroupsList(view: PluginSidebarViewProps) {
     pendingDecorations ?? (decorationsState.status === "ready" ? decorationsState.values : EMPTY_DECORATIONS);
 
   const groups: readonly ProjectGroup[] =
-    pendingGroups ?? (groupsState.status === "ready" ? groupsState.values.groups : EMPTY_GROUPS);
+    pendingPlacement?.groups ?? (groupsState.status === "ready" ? groupsState.values.groups : EMPTY_GROUPS);
+  const parents: Parents =
+    pendingPlacement?.parents ?? (groupsState.status === "ready" ? groupsState.values.parents : EMPTY_PARENTS);
   const collapsedList: readonly string[] =
     pendingCollapsed ?? (layoutState.status === "ready" ? layoutState.values.collapsed : EMPTY_KEYS);
   const collapsed = useMemo(() => new Set(collapsedList), [collapsedList]);
@@ -303,23 +318,36 @@ function GroupsList(view: PluginSidebarViewProps) {
     orderBy: "pinnedAt",
   });
   const byKey = useMemo(() => new Map(projects.map((project) => [project.key, project])), [projects]);
-  const ungrouped = useMemo(() => {
-    const grouped = new Set(groups.flatMap((group) => group.projects));
-    return projects.filter((project) => !grouped.has(project.key));
-  }, [groups, projects]);
-  const ungroupedKeys = useMemo(() => ungrouped.map((project) => project.key), [ungrouped]);
+  const order = useMemo(() => projects.map((project) => project.key), [projects]);
+  const layout = useMemo(() => sidebarLayout(groups, parents, order), [groups, order, parents]);
+  const refsOf = useCallback(
+    (keys: readonly string[]) =>
+      keys.map((key) => byKey.get(key)).filter((item): item is ProjectRef => item !== undefined),
+    [byKey],
+  );
+  /** The keys plus their sub-projects, for the status of a folded section. */
+  const withSubProjects = useCallback(
+    (keys: readonly string[]) => keys.flatMap((key) => [key, ...(layout.children.get(key) ?? [])]),
+    [layout],
+  );
+  const ungrouped = useMemo(() => refsOf(layout.ungrouped), [layout, refsOf]);
+  const ungroupedKeys = useMemo(() => withSubProjects(layout.ungrouped), [layout, withSubProjects]);
 
-  const saveGroups = useCallback(
-    async (next: ProjectGroup[]) => {
+  const savePlacement = useCallback(
+    async (next: Placement) => {
       if (groupsState.status !== "ready") return;
-      setPendingGroups(next);
-      const saved = await groupsSaver.save({ groups: next });
+      setPendingPlacement(next);
+      const saved = await groupsSaver.save(next);
       if (!saved) {
-        setPendingGroups(null);
+        setPendingPlacement(null);
         toast.error(t("toast.groupsSaveFailed"));
       }
     },
     [groupsSaver, groupsState.status, t, toast],
+  );
+  const saveGroups = useCallback(
+    (next: ProjectGroup[]) => savePlacement({ groups: next, parents: { ...parents } }),
+    [parents, savePlacement],
   );
 
   const saveDecorations = useCallback(
@@ -399,17 +427,30 @@ function GroupsList(view: PluginSidebarViewProps) {
   const toggleProject = useCallback((key: string) => toggle(`p:${key}`), [toggle]);
   const toggleUngrouped = useCallback(() => toggle(UNGROUPED_KEY), [toggle]);
 
+  /** Unfolds sections so a project the user just moved is visible where it landed. */
+  const reveal = useCallback(
+    (keys: readonly string[]) => {
+      if (layoutState.status !== "ready" || !keys.some((key) => collapsed.has(key))) return;
+      const next = collapsedList.filter((item) => !keys.includes(item));
+      setPendingCollapsed(next);
+      void layoutSaver.save({ collapsed: next }).then((saved) => {
+        if (!saved) setPendingCollapsed(null);
+      });
+    },
+    [collapsed, collapsedList, layoutSaver, layoutState.status],
+  );
+
   const onDrop = useCallback(
     (subject: DragSubject, target: DropTarget) => {
-      const next =
-        subject.kind === "project"
-          ? moveProject(groups, subject.key, target)
-          : target.kind === "group-at"
-            ? moveGroup(groups, subject.id, target.index)
-            : null;
+      if (subject.kind === "project") {
+        const next = placeProject(groups, parents, subject.key, target);
+        if (next) void savePlacement(next);
+        return;
+      }
+      const next = target.kind === "group-at" ? moveGroup(groups, subject.id, target.index) : null;
       if (next) void saveGroups(next);
     },
-    [groups, saveGroups],
+    [groups, parents, saveGroups, savePlacement],
   );
 
   const viewportRef = useRef<View>(null);
@@ -469,16 +510,88 @@ function GroupsList(view: PluginSidebarViewProps) {
     (reference: ProjectRef, groupId: string | null) => {
       setDialog(null);
       // Picking the group the project is already in must not move it to the end.
-      if (groupOfProject(groups, reference.key) === groupId) return;
-      const next = moveProject(
+      if (!(reference.key in parents) && groupOfProject(groups, reference.key) === groupId) return;
+      const next = placeProject(
         groups,
+        parents,
         reference.key,
         groupId === null ? { kind: "ungroup" } : { kind: "into-group", groupId },
       );
-      if (next) void saveGroups(next);
+      if (!next) return;
+      void savePlacement(next);
+      reveal([groupId === null ? UNGROUPED_KEY : `g:${groupId}`]);
     },
-    [groups, saveGroups],
+    [groups, parents, reveal, savePlacement],
   );
+
+  const chooseParent = useCallback(
+    (reference: ProjectRef, parentKey: string) => {
+      setDialog(null);
+      const next = nestProject(groups, parents, reference.key, parentKey);
+      if (!next) return;
+      void savePlacement(next);
+      const parentGroup = groupOfProject(groups, parentKey);
+      reveal([`p:${parentKey}`, parentGroup === null ? UNGROUPED_KEY : `g:${parentGroup}`]);
+    },
+    [groups, parents, reveal, savePlacement],
+  );
+
+  /** Back to the top level, right after its parent so it stays where the user was looking. */
+  const unnest = useCallback(
+    (reference: ProjectRef) => {
+      setDialog(null);
+      const parent = parents[reference.key];
+      if (parent === undefined) return;
+      const groupId = groupOfProject(groups, parent);
+      const next = placeProject(
+        groups,
+        parents,
+        reference.key,
+        groupId === null ? { kind: "ungroup" } : { kind: "project-after", groupId, projectKey: parent },
+      );
+      if (!next) return;
+      void savePlacement(next);
+      reveal([groupId === null ? UNGROUPED_KEY : `g:${groupId}`]);
+    },
+    [groups, parents, reveal, savePlacement],
+  );
+
+  // A parent missing from the list may still be loading or on a reconnecting host. Only the
+  // daemon's own answer that it has no such project counts as a removal; any failure keeps the
+  // links and tries again later.
+  const latest = useRef({ groups, parents, order, savePlacement });
+  latest.current = { groups, parents, order, savePlacement };
+  const missingParents = layout.missingParents.join("\n");
+  const [parentCheck, setParentCheck] = useState(0);
+  useEffect(() => {
+    if (!missingParents || groupsState.status !== "ready") return;
+    let cancelled = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const timer = setTimeout(() => {
+      projectIdsCall({}).then(
+        (daemon) => {
+          if (cancelled) return;
+          const listed = new Set(daemon.projectIds);
+          const gone = missingParents.split("\n").filter((key) => {
+            const parsed = parseProjectKey(key);
+            return parsed !== null && parsed.hostId === daemon.serverId && !listed.has(parsed.projectId);
+          });
+          if (!gone.length) return;
+          const { groups, parents, order, savePlacement } = latest.current;
+          const next = dropProjects(groups, parents, gone, order);
+          if (next) void savePlacement(next);
+        },
+        () => {
+          if (!cancelled) retry = setTimeout(() => setParentCheck((count) => count + 1), PARENT_CHECK_RETRY_MS);
+        },
+      );
+    }, PARENT_CHECK_DELAY_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      clearTimeout(retry);
+    };
+  }, [groupsState.status, missingParents, parentCheck, projectIdsCall]);
 
   const confirmRemoveProject = useCallback(
     async (reference: ProjectRef, workspaceKeys: readonly string[]) => {
@@ -491,9 +604,10 @@ function GroupsList(view: PluginSidebarViewProps) {
             ? t("project.removedWithWorkspaces", { count: result.removedWorkspaceIds.length })
             : t("project.removed"),
         );
-        // Drop the removed project from its group and its look so no stale key stays behind.
-        const next = moveProject(groups, reference.key, { kind: "ungroup" });
-        if (next) void saveGroups(next);
+        // Drop the removed project and its look so no stale key stays behind. Its sub-projects
+        // take its place.
+        const next = dropProjects(groups, parents, [reference.key], order);
+        if (next) void savePlacement(next);
         const cleaned = withoutDecorations([
           ["projects", [reference.key]],
           ["workspaces", workspaceKeys],
@@ -505,7 +619,7 @@ function GroupsList(view: PluginSidebarViewProps) {
         setRemoving(false);
       }
     },
-    [groups, removeProjectCall, saveDecorations, saveGroups, t, toast, withoutDecorations],
+    [groups, order, parents, removeProjectCall, saveDecorations, savePlacement, t, toast, withoutDecorations],
   );
 
   if (groupsState.status === "loading" || layoutState.status === "loading") {
@@ -533,6 +647,20 @@ function GroupsList(view: PluginSidebarViewProps) {
     );
   }
 
+  /**
+   * Projects `reference` can go under: the other top-level projects of the section it shows in (its
+   * parent's section for a sub-project), in sidebar order.
+   */
+  const parentChoices = (reference: ProjectRef): ProjectRef[] => {
+    const parent = parents[reference.key];
+    const section = sectionOf(layout, reference.key);
+    if (section === undefined) return [];
+    const keys = section === null ? layout.ungrouped : (layout.groups.get(section) ?? []);
+    return refsOf(keys).filter(
+      (item) => item.key === parent || canNest(parents, reference.key, item.key),
+    );
+  };
+
   const draggingKey =
     drag.subject?.kind === "project"
       ? drag.subject.key
@@ -540,19 +668,28 @@ function GroupsList(view: PluginSidebarViewProps) {
         ? drag.subject.id
         : null;
 
-  const projectBlock = (reference: ProjectRef, groupId: string | null) => (
-    <ProjectBlock
-      key={reference.key}
-      reference={reference}
-      groupId={groupId}
-      collapsed={collapsed.has(`p:${reference.key}`)}
-      dragging={draggingKey === reference.key}
-      view={view}
-      onToggle={toggleProject}
-      onMenu={openProjectMenu}
-      onWorkspaceMenu={openWorkspaceMenu}
-    />
-  );
+  const projectBlock = (reference: ProjectRef, groupId: string | null, nested = false): ReactNode => {
+    const children = nested
+      ? []
+      : refsOf(layout.children.get(reference.key) ?? []);
+    return (
+      <ProjectBlock
+        key={reference.key}
+        reference={reference}
+        groupId={groupId}
+        nested={nested}
+        subProjects={children.map((child) => child.key)}
+        collapsed={collapsed.has(`p:${reference.key}`)}
+        dragging={draggingKey === reference.key}
+        view={view}
+        onToggle={toggleProject}
+        onMenu={openProjectMenu}
+        onWorkspaceMenu={openWorkspaceMenu}
+      >
+        {children.map((child) => projectBlock(child, groupId, true))}
+      </ProjectBlock>
+    );
+  };
 
   return (
     <DecorationsContext.Provider value={decorations}>
@@ -590,15 +727,14 @@ function GroupsList(view: PluginSidebarViewProps) {
               ) : null}
 
               {groups.map((group, index) => {
-                const members = group.projects
-                  .map((key) => byKey.get(key))
-                  .filter((reference): reference is ProjectRef => reference !== undefined);
+                const members = refsOf(layout.groups.get(group.id) ?? []);
                 const folded = collapsed.has(`g:${group.id}`);
                 return (
                   <Fragment key={group.id}>
                     {index > 0 || pinned.length ? <View style={{ height: look.groupGap }} /> : null}
                     <GroupHeader
                       group={group}
+                      statusKeys={withSubProjects(members.map((reference) => reference.key))}
                       count={members.length}
                       collapsed={folded}
                       renaming={renamingId === group.id}
@@ -648,8 +784,12 @@ function GroupsList(view: PluginSidebarViewProps) {
           <ProjectMenuDialog
             reference={dialog.reference}
             groups={groups}
+            parents={parents}
+            parentChoices={parentChoices(dialog.reference)}
             theme={view.theme}
             onChooseGroup={(groupId) => chooseGroup(dialog.reference, groupId)}
+            onChooseParent={(parentKey) => chooseParent(dialog.reference, parentKey)}
+            onUnnest={() => unnest(dialog.reference)}
             onNewWorkspace={() => {
               setDialog(null);
               view.navigation.openProject(dialog.reference);

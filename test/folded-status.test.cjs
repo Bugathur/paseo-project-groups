@@ -52,15 +52,17 @@ test("mostUrgent follows Paseo's order and ignores unknown values", () => {
   assert.equal(model.mostUrgent(["something-new", "attention"]), "attention");
 });
 
-function render(name, props, { showFoldedStatus, statuses }) {
+function render(name, props, { showFoldedStatus, statuses, workspaces = [] }) {
   const queries = [];
   const rows = load("rows.tsx", {
     react: React,
     "react/jsx-runtime": require("react/jsx-runtime"),
     "react-native": { View: "View", Text: "Text", Pressable: "Pressable", ActivityIndicator: "Spinner" },
     "@getpaseo/plugin/client": {
+      useProject: (_ref, selector) => selector({ displayName: "Project" }),
       useWorkspaces: (query) => {
         queries.push(query);
+        if (!query.groupBy) return workspaces.filter(query.where).map((item) => item.ref);
         return statuses.map((key) => ({ key, title: null, color: null, items: [] }));
       },
     },
@@ -93,24 +95,28 @@ function render(name, props, { showFoldedStatus, statuses }) {
       node.props.style?.width === 12 &&
       node.props.style?.height === 12,
   );
-  return { badges, slots, queries, renderer };
+  const fills = renderer.root.findAll(
+    (node) => node.type === "View" && node.props.pointerEvents === "none" && node.props.style?.opacity === 0.5,
+  );
+  return { badges, slots, fills, queries, renderer };
 }
 
-function groupHeader({ collapsed, showFoldedStatus, statuses }) {
+function groupHeader({ collapsed, showFoldedStatus, statuses, active = null, workspaces }) {
   const props = {
     group: { id: "group", name: "Work", projects: ["p1"] },
+    statusKeys: ["p1", "p1-sub"],
     count: 1,
     collapsed,
     renaming: false,
     dragging: false,
-    view: { theme, layout: { compact: true } },
+    view: { theme, layout: { compact: true }, active: { workspace: active } },
     onToggle: noop,
     onStartRename: noop,
     onRename: noop,
     onCancelRename: noop,
     onDelete: noop,
   };
-  return render("GroupHeader", props, { showFoldedStatus, statuses });
+  return render("GroupHeader", props, { showFoldedStatus, statuses, workspaces });
 }
 
 test("a folded group shows its most urgent status", () => {
@@ -125,6 +131,7 @@ test("a folded group shows its most urgent status", () => {
   const workspace = { project: { key: "p1" }, pinnedAt: null, background: false, archivingAt: null };
   assert.equal(where(workspace), true);
   assert.equal(where({ ...workspace, project: { key: "other" } }), false);
+  assert.equal(where({ ...workspace, project: { key: "p1-sub" } }), true, "sub-projects roll up");
   assert.equal(where({ ...workspace, background: true }), false);
   act(() => renderer.unmount());
 });
@@ -163,7 +170,7 @@ test("the folded Ungrouped section shows the status of projects in no group", ()
     projects: ["p1"],
     count: 1,
     collapsed: true,
-    view: { theme, layout: { compact: true } },
+    view: { theme, layout: { compact: true }, active: { workspace: null } },
     onToggle: noop,
   };
   const { badges, slots, queries, renderer } = render("UngroupedHeader", props, {
@@ -178,3 +185,189 @@ test("the folded Ungrouped section shows the status of projects in no group", ()
   assert.equal(queries[0].where({ ...workspace, project: { key: "p2" } }), false);
   act(() => renderer.unmount());
 });
+
+test("a folded project rolls up the status of its sub-projects", () => {
+  const props = {
+    reference: { key: "p1", id: "one", hostId: "host" },
+    groupId: null,
+    nested: false,
+    subProjects: ["p1-sub"],
+    collapsed: true,
+    dragging: false,
+    view: { theme, layout: { compact: true }, active: { workspace: null }, navigation: {} },
+    onToggle: noop,
+    onMenu: noop,
+    onWorkspaceMenu: noop,
+  };
+  const { badges, queries, renderer } = render("ProjectBlock", props, {
+    showFoldedStatus: true,
+    statuses: ["needs_input"],
+  });
+  assert.equal(badges.length, 1);
+  const workspace = { project: { key: "p1-sub" }, pinnedAt: null, background: false, archivingAt: null };
+  const folded = queries[1].where;
+  assert.equal(folded(workspace), true);
+  assert.equal(folded({ ...workspace, project: { key: "p2" } }), false);
+  assert.equal(queries[0].where(workspace), false, "the workspace list stays the project's own");
+  act(() => renderer.unmount());
+});
+
+const listed = { pinnedAt: null, background: false, archivingAt: null };
+const openSub = { ...listed, ref: { key: "w1" }, project: { key: "p1-sub" } };
+
+test("a folded group holding the open workspace gets a soft fill, setting on or off", () => {
+  for (const showFoldedStatus of [true, false]) {
+    const { fills, renderer } = groupHeader({
+      collapsed: true,
+      showFoldedStatus,
+      statuses: [],
+      active: { key: "w1" },
+      workspaces: [openSub],
+    });
+    assert.equal(fills.length, 1);
+    act(() => renderer.unmount());
+  }
+});
+
+test("no fill when the group is open or the open workspace is elsewhere", () => {
+  for (const options of [
+    { collapsed: false, active: { key: "w1" } },
+    { collapsed: true, active: { key: "other" } },
+    { collapsed: true, active: null },
+  ]) {
+    const { fills, renderer } = groupHeader({
+      ...options,
+      showFoldedStatus: true,
+      statuses: [],
+      workspaces: [openSub, { ...openSub, ref: { key: "w2" }, project: { key: "p9" } }],
+    });
+    assert.equal(fills.length, 0, JSON.stringify(options));
+    act(() => renderer.unmount());
+  }
+});
+
+test("a folded project holding the open workspace in a sub-project gets the fill", () => {
+  const props = {
+    reference: { key: "p1", id: "one", hostId: "host" },
+    groupId: null,
+    nested: false,
+    subProjects: ["p1-sub"],
+    collapsed: true,
+    dragging: false,
+    view: { theme, layout: { compact: true }, active: { workspace: { key: "w1" } }, navigation: {} },
+    onToggle: noop,
+    onMenu: noop,
+    onWorkspaceMenu: noop,
+  };
+  const { fills, renderer } = render("ProjectBlock", props, {
+    showFoldedStatus: true,
+    statuses: [],
+    workspaces: [openSub],
+  });
+  assert.equal(fills.length, 1);
+  act(() => renderer.unmount());
+});
+
+// The model runs in its own VM context; compare plain copies of its objects.
+const plain = (value) => JSON.parse(JSON.stringify(value));
+
+test("subProjects keeps one level and ignores links to missing projects", () => {
+  const order = ["a", "b", "c", "d", "e"];
+  const tree = model.subProjects(order, { b: "a", c: "a", d: "b", e: "gone" });
+  assert.deepEqual(plain([...tree.entries()]), [["a", ["b", "c"]]]);
+});
+
+test("nestProject takes the project out of its group and refuses deeper nesting", () => {
+  const groups = [{ id: "g", name: "G", projects: ["a", "b"] }];
+  const placed = model.nestProject(groups, {}, "b", "a");
+  assert.deepEqual(plain(placed), { groups: [{ id: "g", name: "G", projects: ["a"] }], parents: { b: "a" } });
+  assert.equal(model.nestProject(placed.groups, placed.parents, "b", "a"), null, "already there");
+  assert.equal(model.nestProject(groups, {}, "a", "a"), null, "not under itself");
+  assert.equal(model.nestProject(groups, { b: "a" }, "c", "b"), null, "parent is a sub-project");
+  assert.equal(model.nestProject(groups, { b: "a" }, "a", "c"), null, "project has sub-projects");
+});
+
+test("placeProject pulls a sub-project out to a group or Ungrouped", () => {
+  const groups = [{ id: "g", name: "G", projects: ["a"] }];
+  assert.deepEqual(plain(model.placeProject(groups, { b: "a" }, "b", { kind: "into-group", groupId: "g" })), {
+    groups: [{ id: "g", name: "G", projects: ["a", "b"] }],
+    parents: {},
+  });
+  assert.deepEqual(plain(model.placeProject(groups, { b: "a" }, "b", { kind: "ungroup" })), { groups, parents: {} });
+  assert.equal(model.placeProject(groups, {}, "b", { kind: "ungroup" }), null);
+  const after = model.placeProject([{ id: "g", name: "G", projects: ["a", "c"] }], { b: "a" }, "b", {
+    kind: "project-after",
+    groupId: "g",
+    projectKey: "a",
+  });
+  assert.deepEqual(plain(after), { groups: [{ id: "g", name: "G", projects: ["a", "b", "c"] }], parents: {} });
+});
+
+const layoutOf = (groups, parents, order) => {
+  const layout = model.sidebarLayout(groups, parents, order);
+  return plain({
+    groups: Object.fromEntries(layout.groups),
+    ungrouped: layout.ungrouped,
+    children: Object.fromEntries(layout.children),
+    missingParents: layout.missingParents,
+  });
+};
+
+test("a sub-project shows under its parent and nowhere else", () => {
+  const groups = [{ id: "g", name: "G", projects: ["a", "c"] }];
+  assert.deepEqual(layoutOf(groups, { b: "a" }, ["a", "b", "c", "d"]), {
+    groups: { g: ["a", "c"] },
+    ungrouped: ["d"],
+    children: { a: ["b"] },
+    missingParents: [],
+  });
+});
+
+test("while the parent is missing, the sub-project shows where the parent was and keeps its link", () => {
+  const groups = [{ id: "g", name: "G", projects: ["a", "c"] }];
+  // "a" is still loading: its sub-project stands in its place in the group, not in Ungrouped.
+  assert.deepEqual(layoutOf(groups, { b: "a" }, ["b", "c"]), {
+    groups: { g: ["b", "c"] },
+    ungrouped: [],
+    children: {},
+    missingParents: ["a"],
+  });
+  // "a" loads again: "b" is back under it, nothing was saved in between.
+  assert.deepEqual(layoutOf(groups, { b: "a" }, ["a", "b", "c"]).children, { a: ["b"] });
+  // A missing parent that was in no group leaves its sub-project in Ungrouped.
+  assert.deepEqual(layoutOf([], { b: "a" }, ["b"]).ungrouped, ["b"]);
+});
+
+test("saving a group change while a parent is missing keeps the link and the parent's place", () => {
+  const groups = [{ id: "g", name: "G", projects: ["a", "c"] }];
+  const moved = model.placeProject(groups, { b: "a" }, "c", { kind: "project-before", groupId: "g", projectKey: "a" });
+  assert.deepEqual(plain(moved), { groups: [{ id: "g", name: "G", projects: ["c", "a"] }], parents: { b: "a" } });
+});
+
+test("removing a parent puts its sub-projects in its place and deletes the links", () => {
+  const groups = [{ id: "g", name: "G", projects: ["x", "a", "y"] }];
+  const order = ["a", "b", "c", "x", "y"];
+  assert.deepEqual(plain(model.dropProjects(groups, { c: "a", b: "a", z: "q" }, ["a"], order)), {
+    groups: [{ id: "g", name: "G", projects: ["x", "b", "c", "y"] }],
+    parents: { z: "q" },
+  });
+  // A parent in no group: its sub-projects go to Ungrouped.
+  assert.deepEqual(plain(model.dropProjects([], { b: "a" }, ["a"], order)), { groups: [], parents: {} });
+  // Removing a sub-project only drops its own link.
+  assert.deepEqual(plain(model.dropProjects(groups, { b: "a" }, ["b"], order)), { groups, parents: {} });
+  assert.equal(model.dropProjects(groups, { b: "a" }, ["nothing"], order), null);
+});
+
+test("project keys split into host and project ids", () => {
+  assert.deepEqual(plain(model.parseProjectKey('["srv_1","prj_2"]')), { hostId: "srv_1", projectId: "prj_2" });
+  assert.equal(model.parseProjectKey("prj_2"), null);
+  assert.equal(model.parseProjectKey('["srv_1"]'), null);
+});
+
+test("sectionOf finds a sub-project's section through its parent", () => {
+  const layout = model.sidebarLayout([{ id: "g", name: "G", projects: ["a"] }], { b: "a" }, ["a", "b", "d"]);
+  assert.equal(model.sectionOf(layout, "b"), "g");
+  assert.equal(model.sectionOf(layout, "d"), null);
+  assert.equal(model.sectionOf(layout, "zzz"), undefined);
+});
+
