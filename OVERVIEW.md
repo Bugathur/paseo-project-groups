@@ -16,19 +16,21 @@ Click **New group** at the top of the sidebar and type a name. Then drag project
 - Drop a project on a group header to add it to the end of that group.
 - Drop it between two projects to put it where the blue line shows.
 - Drag a group header to move the whole group.
-- On a phone, long-press a row before you drag it.
+- On a phone or tablet, long-press a project or group name, then drag. A quick swipe scrolls the list instead.
 - Projects you haven't sorted yet sit under Ungrouped. New projects land there too.
 - Deleting a group leaves its projects alone. They go back to Ungrouped.
+
+Folding a project or group hides its workspaces but not their status. The folded row shows the most urgent one on its icon: needs input, failed, running, or ready to review. Ungrouped does the same.
 
 The ⋯ button on a project moves it to another group, starts a new workspace, copies its path or removes it. The ⋯ button on a workspace renames, pins, copies the path or branch, or archives it.
 
 ## Colors and icons
 
-Click a project's folder icon or a group's palette button. Pick one of 11 colors and one of 36 icons, or type an emoji. For a workspace, use Set color in its ⋯ menu. The color goes on the name and the icon.
+Projects show the image you gave them in Paseo, or a folder when they have none.
 
-Colors and icons only show in this view. Paseo's own project icons don't change.
+To change a look, click a project's icon or a group's palette button. Pick one of 11 colors and one of 36 icons, or type a single emoji. For a workspace, use Set color in its ⋯ menu. The color goes on the name and the icon.
 
-Projects use their existing Paseo icon by default. Choosing an icon or emoji here overrides it; resetting the icon restores the project's own image. When an image is unavailable, a folder icon is shown. Project images are read from the daemon running this plugin. PNG, JPEG, GIF, WebP and self-contained SVGs supported by Paseo's plugin renderer can be displayed.
+What you pick here only shows in this view and changes nothing in Paseo. Reset the icon to bring back the project's own image. Images can be PNG, JPEG, GIF or WebP, or an SVG that loads no outside files.
 
 ## Settings
 
@@ -39,14 +41,14 @@ The sliders button next to New group opens the plugin's settings. You can change
 - space between groups, from none to extra large
 - how far projects and workspaces are indented
 - whether group names are bold
-- which details show: folder icons, status dots, changed-line counts, the Pinned section
+- which details show: project icons, status dots, status on folded rows, changed-line counts, the Pinned section
 - the language: same as the app, English, Korean or Simplified Chinese
 
 Settings are saved per device, so your phone and your computer can look different.
 
 ## What it stores
 
-Groups, their order, colors and icons are saved in the plugin's settings on the daemon. Every app connected to that daemon sees the same groups. Which groups are folded is saved per device. To read project images, the plugin connects locally to its own daemon using Paseo's installed modules. It contacts no external service. If those modules are unavailable, projects keep the folder fallback.
+Groups, their order, colors and icons are saved in the plugin's settings on the daemon. Every app connected to that daemon sees the same groups. Which groups are folded is saved per device. Project images come from the daemon running the plugin, over a local connection that uses Paseo's own installed modules. Nothing goes to an outside service. When an image can't be read, the folder icon shows instead.
 
 Removing a project runs `paseo project delete` on the daemon's machine, because the plugin API has no call for it. Paseo archives the project's workspaces and leaves the project folder on disk. Worktrees that Paseo created for those workspaces can be deleted when they are archived. The confirm dialog tells you this before anything happens.
 

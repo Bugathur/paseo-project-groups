@@ -23,12 +23,13 @@ Installing does not change the sidebar. Open **Settings → Sidebar** and set **
 - Make groups with **New group** at the top of the sidebar, then drag projects into them.
 - Drag group headers to reorder groups. Fold the ones you aren't using.
 - Give groups and projects a color and an icon or emoji. Workspaces get a color.
-- Projects use their Paseo icon unless you choose a plugin icon or emoji.
+- Projects use their Paseo image unless you choose a plugin icon or emoji.
+- Folded projects and groups show the most urgent workspace status on their icon.
 - Use the ⋯ menus to move, rename, pin, archive or remove things.
 - Change text size, row height, space between groups and indentation per device.
 - Read the plugin in English, Korean or Simplified Chinese.
 
-On a phone, long-press a row before dragging.
+On a phone or tablet, long-press a name before dragging. A quick swipe scrolls the list.
 
 ## Requirements
 
