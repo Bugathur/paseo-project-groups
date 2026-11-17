@@ -357,12 +357,38 @@ export function GroupHeader({
   );
 }
 
+/** A small host name after a project name, so projects of different hosts can be told apart. */
+function HostTag({ label, theme }: { label: string; theme: Theme }) {
+  const look = useLook();
+  return (
+    <Text
+      selectable={false}
+      numberOfLines={1}
+      style={{
+        flexShrink: 0,
+        maxWidth: 96,
+        color: theme.colors.foregroundMuted,
+        fontSize: Math.max(9, look.small - 1),
+        lineHeight: look.smallLine,
+        paddingHorizontal: 5,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+      }}
+    >
+      {label}
+    </Text>
+  );
+}
+
 export function UngroupedHeader({
   projects,
   count,
   collapsed,
   view,
   onToggle,
+  hostId = null,
+  hostLabel = null,
 }: {
   /** Ref keys of the projects in no group and their sub-projects. */
   projects: readonly string[];
@@ -370,11 +396,15 @@ export function UngroupedHeader({
   collapsed: boolean;
   view: PluginSidebarViewProps;
   onToggle: () => void;
+  /** Set when Ungrouped is split by host: this section holds that host's projects. */
+  hostId?: string | null;
+  hostLabel?: string | null;
 }) {
   const look = useLook();
   const styles = useRowStyles(view.theme);
   const t = useT();
-  const slotRef = useDragSlot("ungrouped", { kind: "ungrouped" });
+  const slotRef = useDragSlot(hostId ? `ungrouped:${hostId}` : "ungrouped", { kind: "ungrouped", hostId });
+  const title = hostLabel ? `${t("sidebar.ungrouped")} · ${hostLabel}` : t("sidebar.ungrouped");
   const controller = useDrag();
   const muted = view.theme.colors.foregroundMuted;
   const toggle = useCallback(() => {
@@ -389,9 +419,7 @@ export function UngroupedHeader({
     <View ref={slotRef}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={t(collapsed ? "common.expand" : "common.collapse", {
-          name: t("sidebar.ungrouped"),
-        })}
+        accessibilityLabel={t(collapsed ? "common.expand" : "common.collapse", { name: title })}
         onPress={toggle}
         style={styles.header}
       >
@@ -401,7 +429,7 @@ export function UngroupedHeader({
           {null}
         </Badged>
         <Text selectable={false} numberOfLines={1} style={styles.mutedHeading}>
-          {t("sidebar.ungrouped")}
+          {title}
         </Text>
         <Text selectable={false} style={styles.detail}>
           {count}
@@ -661,6 +689,7 @@ export function ProjectBlock({
   onToggle,
   onMenu,
   onWorkspaceMenu,
+  hostLabel = null,
   children,
 }: {
   reference: ProjectRef;
@@ -675,6 +704,8 @@ export function ProjectBlock({
   onToggle: (key: string) => void;
   onMenu: (reference: ProjectRef) => void;
   onWorkspaceMenu: (reference: WorkspaceRef) => void;
+  /** Host name shown after the project name when several hosts are connected; null hides it. */
+  hostLabel?: string | null;
   /** Sub-project blocks, hidden while folded. */
   children?: ReactNode;
 }) {
@@ -692,6 +723,10 @@ export function ProjectBlock({
   // A sub-project sits where its parent's workspaces start.
   const shift = nested ? look.workspaceIndent - look.projectIndent : 0;
   const name = project?.name ?? reference.id;
+  // The name shrinks to fit next to the host tag instead of filling the row, which would push the
+  // tag to the far edge. `flex: 0` would collapse it on web, so drop `flex` altogether.
+  const { flex: _fill, ...nameBase } = styles.projectName;
+  const nameText = { ...nameBase, flexShrink: 1 };
   const slotRef = useDragSlot(`p:${reference.key}`, {
     kind: "project",
     projectKey: reference.key,
@@ -750,13 +785,16 @@ export function ProjectBlock({
               </Pressable>
             ) : null}
           </Badged>
-          <Text
-            selectable={false}
-            numberOfLines={1}
-            style={[styles.projectName, decoration.color ? { color: decoration.color } : null]}
-          >
-            {name}
-          </Text>
+          <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 6, minWidth: 0 }}>
+            <Text
+              selectable={false}
+              numberOfLines={1}
+              style={[nameText, decoration.color ? { color: decoration.color } : null]}
+            >
+              {name}
+            </Text>
+            {hostLabel ? <HostTag label={hostLabel} theme={view.theme} /> : null}
+          </View>
           <RowActions
             show={hover.show}
             slots={2}

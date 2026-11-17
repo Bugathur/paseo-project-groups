@@ -1,4 +1,5 @@
 import {
+  useHosts,
   useProjects,
   useRpc,
   useSettings,
@@ -330,8 +331,49 @@ function GroupsList(view: PluginSidebarViewProps) {
     (keys: readonly string[]) => keys.flatMap((key) => [key, ...(layout.children.get(key) ?? [])]),
     [layout],
   );
-  const ungrouped = useMemo(() => refsOf(layout.ungrouped), [layout, refsOf]);
-  const ungroupedKeys = useMemo(() => withSubProjects(layout.ungrouped), [layout, withSubProjects]);
+
+  // With projects from more than one host, Ungrouped is split by host and grouped projects carry a
+  // small host tag. With a single host nothing changes, including the fold key of Ungrouped.
+  const hosts = useHosts();
+  const hostIds = useMemo(() => {
+    const seen: string[] = [];
+    for (const key of order) {
+      const id = parseProjectKey(key)?.hostId;
+      if (id && !seen.includes(id)) seen.push(id);
+    }
+    // The app's host order keeps the sections steady while hosts connect.
+    const rank = (id: string) => {
+      const index = hosts.findIndex((host) => host.serverId === id);
+      return index < 0 ? hosts.length : index;
+    };
+    return seen.sort((left, right) => rank(left) - rank(right));
+  }, [hosts, order]);
+  const multiHost = hostIds.length > 1;
+  const hostLabel = useCallback(
+    (id: string) => hosts.find((host) => host.serverId === id)?.label || id,
+    [hosts],
+  );
+  /** The fold key of the Ungrouped section a project shows in. */
+  const ungroupedKeyOf = useCallback(
+    (projectKey: string) => {
+      const id = parseProjectKey(projectKey)?.hostId;
+      return multiHost && id ? `${UNGROUPED_KEY}:${id}` : UNGROUPED_KEY;
+    },
+    [multiHost],
+  );
+  const ungroupedSections = useMemo(() => {
+    const all = [{ hostId: null as string | null, foldKey: UNGROUPED_KEY, keys: layout.ungrouped }];
+    if (!multiHost) return all;
+    const split = hostIds
+      .map((id) => ({
+        hostId: id as string | null,
+        foldKey: `${UNGROUPED_KEY}:${id}`,
+        keys: layout.ungrouped.filter((key) => parseProjectKey(key)?.hostId === id),
+      }))
+      .filter((section) => section.keys.length > 0);
+    // Keep one header as a drop target even when every project is in a group.
+    return split.length ? split : all;
+  }, [hostIds, layout, multiHost]);
 
   /**
    * `quiet` is for the automatic cleanup of removed parents. Another device may run the same
@@ -429,7 +471,6 @@ function GroupsList(view: PluginSidebarViewProps) {
   );
   const toggleGroup = useCallback((id: string) => toggle(`g:${id}`), [toggle]);
   const toggleProject = useCallback((key: string) => toggle(`p:${key}`), [toggle]);
-  const toggleUngrouped = useCallback(() => toggle(UNGROUPED_KEY), [toggle]);
 
   /** Unfolds sections so a project the user just moved is visible where it landed. */
   const reveal = useCallback(
@@ -523,9 +564,9 @@ function GroupsList(view: PluginSidebarViewProps) {
       );
       if (!next) return;
       void savePlacement(next);
-      reveal([groupId === null ? UNGROUPED_KEY : `g:${groupId}`]);
+      reveal([groupId === null ? ungroupedKeyOf(reference.key) : `g:${groupId}`]);
     },
-    [groups, parents, reveal, savePlacement],
+    [groups, parents, reveal, savePlacement, ungroupedKeyOf],
   );
 
   const chooseParent = useCallback(
@@ -535,9 +576,9 @@ function GroupsList(view: PluginSidebarViewProps) {
       if (!next) return;
       void savePlacement(next);
       const parentGroup = groupOfProject(groups, parentKey);
-      reveal([`p:${parentKey}`, parentGroup === null ? UNGROUPED_KEY : `g:${parentGroup}`]);
+      reveal([`p:${parentKey}`, parentGroup === null ? ungroupedKeyOf(parentKey) : `g:${parentGroup}`]);
     },
-    [groups, parents, reveal, savePlacement],
+    [groups, parents, reveal, savePlacement, ungroupedKeyOf],
   );
 
   /** Back to the top level, right after its parent so it stays where the user was looking. */
@@ -555,9 +596,9 @@ function GroupsList(view: PluginSidebarViewProps) {
       );
       if (!next) return;
       void savePlacement(next);
-      reveal([groupId === null ? UNGROUPED_KEY : `g:${groupId}`]);
+      reveal([groupId === null ? ungroupedKeyOf(reference.key) : `g:${groupId}`]);
     },
-    [groups, parents, reveal, savePlacement],
+    [groups, parents, reveal, savePlacement, ungroupedKeyOf],
   );
 
   // A parent missing from the list may still be loading or on a reconnecting host. Only the
@@ -689,6 +730,8 @@ function GroupsList(view: PluginSidebarViewProps) {
         onToggle={toggleProject}
         onMenu={openProjectMenu}
         onWorkspaceMenu={openWorkspaceMenu}
+        // Inside a host's own Ungrouped section the header already names the host.
+        hostLabel={multiHost && groupId !== null ? hostLabel(reference.hostId) : null}
       >
         {children.map((child) => projectBlock(child, groupId, true))}
       </ProjectBlock>
@@ -759,17 +802,25 @@ function GroupsList(view: PluginSidebarViewProps) {
                 );
               })}
 
-              {groups.length || pinned.length ? <View style={{ height: look.groupGap }} /> : null}
-              <UngroupedHeader
-                projects={ungroupedKeys}
-                count={ungrouped.length}
-                collapsed={collapsed.has(UNGROUPED_KEY)}
-                view={view}
-                onToggle={toggleUngrouped}
-              />
-              {collapsed.has(UNGROUPED_KEY)
-                ? null
-                : ungrouped.map((reference) => projectBlock(reference, null))}
+              {ungroupedSections.map((section, index) => (
+                <Fragment key={section.foldKey}>
+                  {index > 0 || groups.length || pinned.length ? (
+                    <View style={{ height: look.groupGap }} />
+                  ) : null}
+                  <UngroupedHeader
+                    projects={withSubProjects(section.keys)}
+                    count={section.keys.length}
+                    collapsed={collapsed.has(section.foldKey)}
+                    view={view}
+                    onToggle={() => toggle(section.foldKey)}
+                    hostId={section.hostId}
+                    hostLabel={section.hostId ? hostLabel(section.hostId) : null}
+                  />
+                  {collapsed.has(section.foldKey)
+                    ? null
+                    : refsOf(section.keys).map((reference) => projectBlock(reference, null))}
+                </Fragment>
+              ))}
 
               {drag.hit ? <DropIndicator hit={drag.hit} theme={view.theme} /> : null}
             </ScrollView>

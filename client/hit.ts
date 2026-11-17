@@ -5,7 +5,8 @@ export type Slot =
   | { kind: "group"; groupId: string }
   | { kind: "project"; projectKey: string; groupId: string | null }
   | { kind: "empty"; groupId: string }
-  | { kind: "ungrouped" };
+  /** `hostId` is set when Ungrouped is split by host. */
+  | { kind: "ungrouped"; hostId?: string | null };
 
 /** A slot's vertical extent in window coordinates, measured when the drag starts. */
 export interface MeasuredSlot {
@@ -41,6 +42,26 @@ function box(item: MeasuredSlot): Indicator {
   return { kind: "box", y: item.y, height: item.height };
 }
 
+/** The host id in a project ref key (`["<hostId>","<projectId>"]`). Kept here so hit testing stays pure. */
+function hostOfKey(key: string): string | null {
+  try {
+    const value: unknown = JSON.parse(key);
+    return Array.isArray(value) && typeof value[0] === "string" ? value[0] : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The Ungrouped header a project lands under. With Ungrouped split by host, that is its own host's
+ * header wherever it is dropped, so the box shows where it will really go.
+ */
+function ungroupedHeaderFor(key: string, sorted: readonly MeasuredSlot[]): MeasuredSlot | undefined {
+  const headers = sorted.filter((entry) => entry.slot.kind === "ungrouped");
+  const host = hostOfKey(key);
+  return headers.find((entry) => entry.slot.kind === "ungrouped" && entry.slot.hostId === host) ?? headers[0];
+}
+
 function hitProject(key: string, sorted: readonly MeasuredSlot[], y: number): Hit | null {
   const item = nearest(sorted, y);
   if (!item) return null;
@@ -50,12 +71,11 @@ function hitProject(key: string, sorted: readonly MeasuredSlot[], y: number): Hi
     case "empty":
       return { target: { kind: "into-group", groupId: slot.groupId }, indicator: box(item) };
     case "ungrouped":
-      return { target: { kind: "ungroup" }, indicator: box(item) };
+      return { target: { kind: "ungroup" }, indicator: box(ungroupedHeaderFor(key, sorted) ?? item) };
     case "project": {
       if (slot.projectKey === key) return null;
       if (slot.groupId === null) {
-        const header = sorted.find((entry) => entry.slot.kind === "ungrouped");
-        return { target: { kind: "ungroup" }, indicator: box(header ?? item) };
+        return { target: { kind: "ungroup" }, indicator: box(ungroupedHeaderFor(key, sorted) ?? item) };
       }
       const before = y < item.y + item.height / 2;
       return before
