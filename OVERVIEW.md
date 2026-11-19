@@ -22,7 +22,7 @@ Click **New group** at the top of the sidebar and type a name. Then drag project
 
 Folding a project or group hides its workspaces but not their status. The folded row shows the most urgent one on its icon: needs input, failed, running, or ready to review. Ungrouped does the same. If the workspace you have open is inside, the folded row also gets a light fill, so you can see where it went.
 
-The ⋯ button on a project moves it to another group, puts it under another project, starts a new workspace, copies its path or removes it. The ⋯ button on a workspace renames, pins, copies the path or branch, or archives it.
+The ⋯ button on a project moves it to another group, puts it under another project, starts a new workspace, opens its Project settings, copies its path or removes it. The ⋯ button on a workspace renames it, sets its labels, marks it as read or unread, pins it, copies the path or branch, or archives it. Project settings opens in the desktop app and in a browser; the phone app has no such item, because the plugin can't open that page there.
 
 ## Sub-projects
 
@@ -61,14 +61,15 @@ The sliders button next to New group opens the plugin's settings. You can change
 - space between groups, from none to extra large
 - how far projects and workspaces are indented
 - whether group names are bold
-- which details show: project icons, host name tags, status dots, status on folded rows, changed-line counts, the Pinned section
+- which details show: project icons, host name tags, status dots, status on folded rows, the Pinned section
+- how workspaces show: sorted by name, creation or last prompt; titled by their title or branch name; a branch line and labels under the name; changed lines, last activity or nothing right of the name; and whether background workspaces show
 - the language: same as the app, English, Korean or Simplified Chinese
 
 Settings are saved per device, so your phone and your computer can look different.
 
 ## What it stores
 
-Groups, their order, colors and icons are saved in the plugin's settings on the daemon. Every app connected to that daemon sees the same groups. Which groups are folded is saved per device. Project images come from the daemon running the plugin, over a local connection that uses Paseo's own installed modules. Nothing goes to an outside service. When an image can't be read, the folder icon shows instead.
+Groups, their order, colors and icons are saved in the plugin's settings on the daemon. Every app connected to that daemon sees the same groups. Which groups are folded is saved per device. Project images come from the daemon running the plugin, over a local connection that uses Paseo's own installed modules. Nothing goes to an outside service. When an image can't be read, the folder icon shows instead. Label colors and marking a workspace as read or unread use the same local connection, because the plugin API has neither. A daemon only answers for its own host, so on another host labels show without colors.
 
 Removing a project runs `paseo project delete` on the daemon's machine, because the plugin API has no call for it. Paseo archives the project's workspaces and leaves the project folder on disk. Worktrees that Paseo created for those workspaces can be deleted when they are archived. The confirm dialog tells you this before anything happens.
 

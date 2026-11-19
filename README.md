@@ -27,8 +27,8 @@ Installing does not change the sidebar. Open **Settings → Sidebar** and set **
 - Give groups and projects a color and an icon (any Lucide icon, searchable by name) or emoji. Workspaces get a color.
 - Projects use their Paseo image unless you choose a plugin icon or emoji.
 - Folded projects and groups show the most urgent workspace status on their icon, and a light fill when they hold the workspace you have open.
-- Use the ⋯ menus to move, rename, pin, archive or remove things.
-- Change text size, row height, space between groups and indentation per device.
+- Use the ⋯ menus to move, rename, label, pin, archive or remove things, mark a workspace as read or unread, and open a project's settings.
+- Change text size, row height, space between groups and indentation per device, and how workspaces are sorted, titled and labeled, like in Paseo's own sidebar.
 - Read the plugin in English, Korean or Simplified Chinese.
 
 On a phone or tablet, long-press a name before dragging. A quick swipe scrolls the list.
@@ -39,7 +39,7 @@ Paseo 0.16 or later on both the daemon and the app, with plugins enabled. Sideba
 
 ## Data
 
-Groups, colors and icons are saved in the plugin's settings on the daemon, so every connected app sees the same groups. Appearance and folding are saved per device. Removing a project runs `paseo project delete` on the daemon's machine, since the plugin API has no call for it. When a sub-project's parent is missing from the list, the plugin asks that daemon (with `paseo daemon status` and `paseo project ls`) whether the parent still exists, and cleans up only when the daemon says it doesn't. Project icons are read from that daemon over a local connection; no external service is contacted.
+Groups, colors and icons are saved in the plugin's settings on the daemon, so every connected app sees the same groups. Appearance and folding are saved per device. Removing a project runs `paseo project delete` on the daemon's machine, since the plugin API has no call for it. When a sub-project's parent is missing from the list, the plugin asks that daemon (with `paseo daemon status` and `paseo project ls`) whether the parent still exists, and cleans up only when the daemon says it doesn't. Project icons, label colors and read state go through a local connection to that daemon; no external service is contacted.
 
 Uninstalling the plugin deletes the saved groups. To get a new version, use `paseo plugin update project-groups` instead.
 
