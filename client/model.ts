@@ -14,6 +14,39 @@ export function mostUrgent(statuses: Iterable<string>): WorkspaceIndicator {
   return URGENCY[best];
 }
 
+/** Newest first by the chosen time, like the app; "last prompt" falls back to creation. */
+export function compareWorkspaceTimes(
+  sort: "created" | "lastPrompt",
+): (
+  a: { createdAt: string | null; lastPromptAt: string | null; ref: { key: string } },
+  b: { createdAt: string | null; lastPromptAt: string | null; ref: { key: string } },
+) => number {
+  const time = (item: { createdAt: string | null; lastPromptAt: string | null }) => {
+    const value = sort === "lastPrompt" ? (item.lastPromptAt ?? item.createdAt) : item.createdAt;
+    return value ? Date.parse(value) || 0 : 0;
+  };
+  return (a, b) => time(b) - time(a) || a.ref.key.localeCompare(b.ref.key);
+}
+
+/** The app's compact age: "now", "5m", "2h", "3d", then a short date. */
+export function compactTimeAgo(iso: string, now: number = Date.now()): string {
+  const time = Date.parse(iso);
+  if (!time) return "";
+  const minutes = Math.floor((now - time) / 60_000);
+  if (minutes < 1) return "now";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  return new Date(time).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/** The app's route for a project's settings page. */
+export function projectSettingsPath(project: { hostId: string; id: string }): string {
+  return `/settings/hosts/${encodeURIComponent(project.hostId)}/projects/${encodeURIComponent(project.id)}`;
+}
+
 /** What the user is dragging. */
 export type DragSubject =
   { kind: "project"; key: string; label: string } | { kind: "group"; id: string; label: string };

@@ -10,7 +10,7 @@ import {
 } from "@getpaseo/plugin/client";
 import { Icon, ScrollView, useToast } from "@getpaseo/plugin/client/ui";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Animated, Pressable, Text, View, type ScrollView as NativeScrollView } from "react-native";
+import { Animated, Platform, Pressable, Text, View, type ScrollView as NativeScrollView } from "react-native";
 import { projectIdsRpc, removeProjectRpc } from "../shared/rpc";
 import {
   appearanceDocument,
@@ -48,6 +48,7 @@ import {
   nextGroupName,
   placeProject,
   parseProjectKey,
+  projectSettingsPath,
   removeGroup,
   renameGroup,
   sectionOf,
@@ -70,6 +71,19 @@ import {
 import { useSettingsSaver } from "./save";
 
 const UNGROUPED_KEY = "u";
+const WEB = Platform.OS === "web";
+
+/** No plugin API opens it; on web the app's router follows a pushed URL without a reload. */
+function navigateTo(path: string) {
+  // The plugin builds without DOM types.
+  const browser = globalThis as unknown as {
+    history: { pushState(state: null, unused: string, url: string): void };
+    dispatchEvent(event: unknown): void;
+    PopStateEvent: new (type: string) => unknown;
+  };
+  browser.history.pushState(null, "", path);
+  browser.dispatchEvent(new browser.PopStateEvent("popstate"));
+}
 const EMPTY_GROUPS: readonly ProjectGroup[] = [];
 const EMPTY_KEYS: readonly string[] = [];
 const EMPTY_PARENTS: Parents = {};
@@ -315,7 +329,8 @@ function GroupsList(view: PluginSidebarViewProps) {
 
   const projects = useProjects({ orderBy: "displayName" });
   const pinned = useWorkspaces({
-    where: (item) => look.showPinned && !!item.pinnedAt && !item.background && !item.archivingAt,
+    where: (item) =>
+      look.showPinned && !!item.pinnedAt && (look.showBackground || !item.background) && !item.archivingAt,
     orderBy: "pinnedAt",
   });
   const byKey = useMemo(() => new Map(projects.map((project) => [project.key, project])), [projects]);
@@ -549,6 +564,14 @@ function GroupsList(view: PluginSidebarViewProps) {
   const openWorkspaceMenu = useCallback(
     (reference: WorkspaceRef) => setDialog({ kind: "workspace", reference }),
     [],
+  );
+  const openProjectSettings = useCallback(
+    (reference: ProjectRef) => {
+      setDialog(null);
+      navigateTo(projectSettingsPath(reference));
+      view.dismiss();
+    },
+    [view],
   );
 
   const chooseGroup = useCallback(
@@ -849,6 +872,7 @@ function GroupsList(view: PluginSidebarViewProps) {
               setDialog(null);
               view.navigation.openProject(dialog.reference);
             }}
+            onOpenSettings={WEB ? () => openProjectSettings(dialog.reference) : undefined}
             onDecorate={(name) =>
               setDialog({ kind: "decorate", target: { kind: "projects", key: dialog.reference.key, name } })
             }

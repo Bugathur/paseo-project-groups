@@ -42,6 +42,9 @@ export const DENSITIES = ["compact", "comfortable", "spacious"] as const;
 export const INDENTS = ["narrow", "normal", "wide"] as const;
 export const GROUP_SPACINGS = ["none", "small", "medium", "large", "xlarge"] as const;
 export const LANGUAGES = ["auto", "en", "ko", "zh-CN"] as const;
+export const WORKSPACE_SORTS = ["name", "created", "lastPrompt"] as const;
+export const WORKSPACE_TITLES = ["title", "branch"] as const;
+export const ROW_TRAILINGS = ["diff", "timestamp", "none"] as const;
 
 /** Sidebar look. Device scope because text size and spacing depend on the screen. */
 export const appearanceDocument = defineSettings({
@@ -61,14 +64,29 @@ export const appearanceDocument = defineSettings({
     showStatusDots: z.boolean().default(true),
     /** A folded project or group shows its most urgent workspace status on its icon. */
     showFoldedStatus: z.boolean().default(true),
+    /** Replaced by `rowTrailing`; read only when that is unset. */
     showDiffStats: z.boolean().default(true),
+    /** What sits right of a workspace name: changed lines, last activity, or nothing. */
+    rowTrailing: z.enum(ROW_TRAILINGS).optional(),
+    /** A line under the workspace name with its branch, like the app's "Show branch". */
+    showBranch: z.boolean().default(false),
+    showLabels: z.boolean().default(true),
     showPinned: z.boolean().default(true),
+    /** Order of workspaces inside a project. Times sort newest first, like the app. */
+    workspaceSort: z.enum(WORKSPACE_SORTS).default("name"),
+    /** `branch` shows the branch name where the workspace has one. */
+    workspaceTitle: z.enum(WORKSPACE_TITLES).default("title"),
+    /** Helper workspaces agents create in the background. */
+    showBackground: z.boolean().default(false),
     /** Plugin text language. `auto` follows the app language. */
     language: z.enum(LANGUAGES).default("auto"),
   }),
 });
 
 export type AppearanceValues = z.infer<typeof appearanceDocument.schema>;
+export type WorkspaceSort = (typeof WORKSPACE_SORTS)[number];
+export type WorkspaceTitle = (typeof WORKSPACE_TITLES)[number];
+export type RowTrailing = (typeof ROW_TRAILINGS)[number];
 
 /** A color and/or icon the user chose for one sidebar item. Null means "use the default". */
 export const decorationSchema = z.object({

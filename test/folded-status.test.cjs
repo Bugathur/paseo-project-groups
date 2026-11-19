@@ -70,6 +70,7 @@ function render(name, props, { showFoldedStatus, statuses, workspaces = [] }) {
     "./i18n": { useT: () => (key) => key },
     "./model": model,
     "./project-icon": { ProjectIcon: "ProjectIcon" },
+    "./labels": { LabelChip: "LabelChip", labelKey: (name) => name.toLowerCase(), useLabelCatalog: () => ({ labels: null, refresh() {} }) },
     "./look": { useLook: () => ({ icon: 13, showFoldedStatus, showPinned: true }) },
     "./drag": {
       useDrag: () => ({ recentlyDropped: () => false }),
@@ -371,3 +372,31 @@ test("sectionOf finds a sub-project's section through its parent", () => {
   assert.equal(model.sectionOf(layout, "zzz"), undefined);
 });
 
+
+test("project settings path matches the app's route", () => {
+  assert.equal(
+    model.projectSettingsPath({ hostId: "srv_a b", id: "prj/1" }),
+    "/settings/hosts/srv_a%20b/projects/prj%2F1",
+  );
+});
+
+test("time sorts put the newest workspace first", () => {
+  const item = (key, createdAt, lastPromptAt = null) => ({ ref: { key }, createdAt, lastPromptAt });
+  const a = item("a", "2026-11-01T00:00:00Z", "2026-11-10T00:00:00Z");
+  const b = item("b", "2026-11-05T00:00:00Z");
+  const c = item("c", null);
+  const keys = (sort) => [c, a, b].sort(model.compareWorkspaceTimes(sort)).map((w) => w.ref.key);
+  assert.deepEqual(keys("created"), ["b", "a", "c"]);
+  // Last prompt falls back to creation time.
+  assert.deepEqual(keys("lastPrompt"), ["a", "b", "c"]);
+});
+
+test("compact ages match the app's", () => {
+  const now = Date.parse("2026-11-19T12:00:00Z");
+  const ago = (ms) => model.compactTimeAgo(new Date(now - ms).toISOString(), now);
+  assert.equal(ago(20_000), "now");
+  assert.equal(ago(5 * 60_000), "5m");
+  assert.equal(ago(2 * 3_600_000), "2h");
+  assert.equal(ago(3 * 86_400_000), "3d");
+  assert.equal(model.compactTimeAgo("not a date", now), "");
+});
