@@ -1,4 +1,6 @@
-Paseo lists every project in one long column. Once you have a dozen or so, finding one means scrolling. This plugin lets you put projects into groups like Work, Clients or Side projects, and fold the groups you aren't using right now.
+**Languages:** English, Korean (한국어) and Simplified Chinese (简体中文). The plugin follows the app's language, or you can pick one in its settings.
+
+Paseo lists every project in one long column. Once you have a dozen or so, finding one means scrolling. This plugin lets you put projects into groups like Work, Clients or Side projects, and fold the groups you aren't using right now. When an agent hands work to sub-agents in other workspaces, lines show which belong together.
 
 ## Turn it on after installing
 
@@ -44,6 +46,27 @@ When the app is connected to more than one host, projects from all of them show 
 - Tags use the host names from Paseo's settings. If two hosts look the same, rename one under **Settings → Host → Overview**.
 - Groups are saved on the host that provides this view. While another host is offline, its projects are hidden, and they come back in the same place when it reconnects.
 
+## Agent relationships
+
+An agent can start sub-agents in other workspaces, even in other projects. Grouping can put them far apart, so the sidebar links them.
+
+- A line on the left joins the parent agent's workspace with its children's workspaces.
+- The parent's row shows how many children it has.
+- Select or point at one of them, and the whole family lights up.
+- Sub-agents in the parent's own workspace are tabs of that workspace, so the sidebar doesn't list them separately.
+- To hide the lines, the child count and the highlight, turn off **Relationship lines** in the settings.
+
+**By relation** at the top of the sidebar shows every agent as a tree instead: each parent with its children under it, and the project name under each agent. **By project** goes back to the groups. The sidebar always opens **By project**.
+
+In the desktop app and in a browser, the keyboard can move through the list. When a sidebar row has keyboard focus:
+
+- ↑ and ↓ move between rows.
+- ← folds a row and → unfolds it.
+- P jumps to the parent agent.
+- [ and ] jump to the previous and next sibling. From a parent, ] jumps to its first child and [ to its last.
+
+A jump unfolds the group or project that hides the target and scrolls to it.
+
 ## Colors and icons
 
 Projects show the image you gave them in Paseo, or a folder when they have none.
@@ -54,14 +77,14 @@ What you pick here only shows in this view and changes nothing in Paseo. Reset t
 
 ## Settings
 
-The sliders button next to New group opens the plugin's settings. You can change:
+The sliders button at the right end of the toolbar opens the plugin's settings. You can change:
 
 - text size, from 11 to 15 pt
 - row height
 - space between groups, from none to extra large
 - how far projects and workspaces are indented
 - whether group names are bold
-- which details show: project icons, host name tags, status dots, status on folded rows, the Pinned section
+- which details show: project icons, host name tags, status dots, status on folded rows, the Pinned section, relationship lines
 - how workspaces show: sorted by name, creation or last prompt; titled by their title or branch name; a branch line and labels under the name; changed lines, last activity or nothing right of the name; and whether background workspaces show
 - the language: same as the app, English, Korean or Simplified Chinese
 
@@ -69,7 +92,7 @@ Settings are saved per device, so your phone and your computer can look differen
 
 ## What it stores
 
-Groups, their order, colors and icons are saved in the plugin's settings on the daemon. Every app connected to that daemon sees the same groups. Which groups are folded is saved per device. Project images come from the daemon running the plugin, over a local connection that uses Paseo's own installed modules. Nothing goes to an outside service. When an image can't be read, the folder icon shows instead. Label colors and marking a workspace as read or unread use the same local connection, because the plugin API has neither. A daemon only answers for its own host, so on another host labels show without colors.
+Groups, their order, colors and icons are saved in the plugin's settings on the daemon. Every app connected to that daemon sees the same groups. Which groups are folded is saved per device. Project images come from the daemon running the plugin, over a local connection that uses Paseo's own installed modules. Nothing goes to an outside service. When an image can't be read, the folder icon shows instead. Label colors and marking a workspace as read or unread use the same local connection, because the plugin API has neither. A daemon only answers for its own host, so on another host labels show without colors. Agent relationships come from Paseo's own agent list, so the plugin stores nothing for them.
 
 Removing a project runs `paseo project delete` on the daemon's machine, because the plugin API has no call for it. Paseo archives the project's workspaces and leaves the project folder on disk. Worktrees that Paseo created for those workspaces can be deleted when they are archived. The confirm dialog tells you this before anything happens.
 

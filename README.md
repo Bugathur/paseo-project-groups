@@ -2,6 +2,8 @@
 
 Sort Paseo sidebar projects into groups you can drag, fold and color.
 
+**Languages:** English, Korean (한국어), Simplified Chinese (简体中文)
+
 ![Project groups](assets/thumbnail.png)
 
 ## Install
@@ -27,6 +29,8 @@ Installing does not change the sidebar. Open **Settings → Sidebar** and set **
 - Give groups and projects a color and an icon (any Lucide icon, searchable by name) or emoji. Workspaces get a color.
 - Projects use their Paseo image unless you choose a plugin icon or emoji.
 - Folded projects and groups show the most urgent workspace status on their icon, and a light fill when they hold the workspace you have open.
+- See which agents started which: lines join a parent agent's workspace with its sub-agents' workspaces, and **By relation** shows all agents as a tree. Turn the lines off in the settings if you don't need them.
+- Move through the list with the keyboard in the desktop app and browser, including jumps to an agent's parent and siblings.
 - Use the ⋯ menus to move, rename, label, pin, archive or remove things, mark a workspace as read or unread, and open a project's settings.
 - Change text size, row height, space between groups and indentation per device, and how workspaces are sorted, titled and labeled, like in Paseo's own sidebar.
 - Read the plugin in English, Korean or Simplified Chinese.
