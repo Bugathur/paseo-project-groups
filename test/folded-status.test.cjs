@@ -564,3 +564,17 @@ test("workspace title drops vertical flex and keeps status dot and running ring 
     }
   }
 });
+
+test("relationship lines are on by default, and old saved settings keep them on", () => {
+  const settings = load("../shared/settings.ts", {
+    "@getpaseo/plugin": { defineSettings: (definition) => definition },
+    zod: require("zod"),
+  });
+  const look = load("look.tsx", { react: React, "../shared/settings": settings });
+  // A device that saved its appearance before this setting existed has no `showRelations` key.
+  const saved = settings.appearanceDocument.schema.parse({ textSize: 13, showPinned: false });
+  assert.equal(saved.showRelations, true);
+  assert.equal(look.lookFrom(saved).showRelations, true);
+  const off = settings.appearanceDocument.schema.parse({ showRelations: false });
+  assert.equal(look.lookFrom(off).showRelations, false);
+});

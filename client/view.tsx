@@ -67,6 +67,7 @@ import {
   SectionHeading,
   TextButton,
   UngroupedHeader,
+  WorkspaceRow,
   useRowStyles,
 } from "./rows";
 import { useSettingsSaver } from "./save";
@@ -614,7 +615,10 @@ function GroupsList(view: PluginSidebarViewProps) {
   const contentRef = useRef<View>(null);
   const scrollRef = useRef<NativeScrollView>(null);
   const drag = useDragController(viewportRef, scrollRef, onDrop);
-  const railFamilies = useMemo(() => (byRelation ? [] : families), [byRelation, families]);
+  const railFamilies = useMemo(
+    () => (byRelation || !look.showRelations ? [] : families),
+    [byRelation, families, look.showRelations],
+  );
   const {
     register,
     refresh,
@@ -906,9 +910,13 @@ function GroupsList(view: PluginSidebarViewProps) {
     register,
     refresh,
   };
-  const renderWorkspace = (reference: WorkspaceRef, indent: number) => (
-    <RelationshipWorkspace key={reference.key} reference={reference} indent={indent} sidebar={sidebar} onMenu={openWorkspaceMenu} />
-  );
+  // With relationships off, the project view shows plain rows: no lines, child count or highlight.
+  const renderWorkspace = (reference: WorkspaceRef, indent: number) =>
+    look.showRelations ? (
+      <RelationshipWorkspace key={reference.key} reference={reference} indent={indent} sidebar={sidebar} onMenu={openWorkspaceMenu} />
+    ) : (
+      <WorkspaceRow key={reference.key} reference={reference} indent={indent} view={view} onMenu={openWorkspaceMenu} />
+    );
 
   const projectBlock = (reference: ProjectRef, groupId: string | null, nested = false): ReactNode => {
     const children = nested
