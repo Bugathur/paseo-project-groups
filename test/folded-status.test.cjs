@@ -185,6 +185,7 @@ function render(name, props, { showFoldedStatus, statuses, workspaces = [] }) {
       DecorIcon: "DecorIcon",
       useDecorations: () => ({ get: () => ({ color: null, icon: null }) }),
     },
+    "./web": { sidebarNavProps: () => ({}) },
   });
   let renderer;
   act(() => {
@@ -302,7 +303,7 @@ test("a folded project rolls up the status of its sub-projects", () => {
     view: { theme, layout: { compact: true }, active: { workspace: null }, navigation: {} },
     onToggle: noop,
     onMenu: noop,
-    onWorkspaceMenu: noop,
+    renderWorkspace: noop,
   };
   const { badges, queries, renderer } = render("ProjectBlock", props, {
     showFoldedStatus: true,
@@ -362,7 +363,7 @@ test("a folded project holding the open workspace in a sub-project gets the fill
     view: { theme, layout: { compact: true }, active: { workspace: { key: "w1" } }, navigation: {} },
     onToggle: noop,
     onMenu: noop,
-    onWorkspaceMenu: noop,
+    renderWorkspace: noop,
   };
   const { fills, renderer } = render("ProjectBlock", props, {
     showFoldedStatus: true,
@@ -536,6 +537,7 @@ test("workspace title drops vertical flex and keeps status dot and running ring 
         "./model": model,
         "./project-icon": { ProjectIcon: "ProjectIcon" },
         "./running-spinner": { RunningSpinner: "RunningSpinner" },
+        "./web": { sidebarNavProps: () => ({}) },
         "./labels": { LabelChip: "LabelChip", labelKey: (name) => name.toLowerCase(), useLabelCatalog: () => ({ labels: null, refresh() {} }) },
         "./look": { useLook: () => look },
         "./drag": { useDrag: () => ({ recentlyDropped: () => false }), useDragSlot: () => null, useDragHandle: () => ({}) },

@@ -32,6 +32,15 @@ const en = {
     invalid: "Saved groups can't be read. {{reason}}",
     resetGroups: "Reset groups",
   },
+  relation: {
+    projects: "By project",
+    relationships: "By relation",
+    empty: "No agents to display.",
+    count_one: "1",
+    count_other: "{{count}}",
+    children_one: "1 child agent",
+    children_other: "{{count}} child agents",
+  },
   group: {
     defaultName: "Group {{number}}",
     nameLabel: "Group name",
@@ -245,6 +254,13 @@ const ko = {
     invalid: "저장된 그룹 정보를 읽을 수 없습니다. {{reason}}",
     resetGroups: "그룹 정보 초기화",
   },
+  relation: {
+    projects: "프로젝트별",
+    relationships: "관계별",
+    empty: "표시할 에이전트가 없습니다.",
+    count_other: "{{count}}",
+    children_other: "하위 에이전트 {{count}}개",
+  },
   group: {
     defaultName: "그룹 {{number}}",
     nameLabel: "그룹 이름",
@@ -445,6 +461,13 @@ const zhCN = {
     loadFailed: "分组加载失败。{{reason}}",
     invalid: "无法读取已存分组。{{reason}}",
     resetGroups: "重置分组",
+  },
+  relation: {
+    projects: "按项目",
+    relationships: "按关系",
+    empty: "暂无 Agent",
+    count_other: "{{count}} 子",
+    children_other: "{{count}} 个子 Agent",
   },
   group: {
     defaultName: "分组 {{number}}",
