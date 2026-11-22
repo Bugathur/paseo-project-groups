@@ -52,6 +52,7 @@ An agent can start sub-agents in other workspaces, even in other projects. Group
 
 - A line on the left joins the parent agent's workspace with its children's workspaces.
 - The parent's row shows how many children it has.
+- Each family has its own color, shared by its line and its child count, so crossing families stay easy to tell apart.
 - Select or point at one of them, and the whole family lights up.
 - Sub-agents in the parent's own workspace are tabs of that workspace, so the sidebar doesn't list them separately.
 - To hide the lines, the child count and the highlight, turn off **Relationship lines** in the settings.
