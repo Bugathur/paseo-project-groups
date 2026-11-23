@@ -43,7 +43,7 @@ Paseo 0.16 or later on both the daemon and the app, with plugins enabled. Sideba
 
 ## Data
 
-Groups, colors and icons are saved in the plugin's settings on the daemon, so every connected app sees the same groups. Appearance and folding are saved per device. Removing a project runs `paseo project delete` on the daemon's machine, since the plugin API has no call for it. When a sub-project's parent is missing from the list, the plugin asks that daemon (with `paseo daemon status` and `paseo project ls`) whether the parent still exists, and cleans up only when the daemon says it doesn't. Project icons, label colors and read state go through a local connection to that daemon; no external service is contacted.
+Groups, colors and icons are saved in the plugin's settings on the daemon, so every connected app sees the same groups. Appearance and folding are saved per device. Project icons, label colors and read state go through a local connection to that daemon, and no external service is contacted. Removing a project and checking whether a sub-project's parent still exists also use that connection, because the plugin API has no call for them, and a parent's nesting is cleaned up only when the daemon says the parent is gone. The plugin starts no other programs.
 
 Uninstalling the plugin deletes the saved groups. To get a new version, use `paseo plugin update project-groups` instead.
 

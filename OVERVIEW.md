@@ -95,9 +95,9 @@ Settings are saved per device, so your phone and your computer can look differen
 
 Groups, their order, colors and icons are saved in the plugin's settings on the daemon. Every app connected to that daemon sees the same groups. Which groups are folded is saved per device. Project images come from the daemon running the plugin, over a local connection that uses Paseo's own installed modules. Nothing goes to an outside service. When an image can't be read, the folder icon shows instead. Label colors and marking a workspace as read or unread use the same local connection, because the plugin API has neither. A daemon only answers for its own host, so on another host labels show without colors. Agent relationships come from Paseo's own agent list, so the plugin stores nothing for them.
 
-Removing a project runs `paseo project delete` on the daemon's machine, because the plugin API has no call for it. Paseo archives the project's workspaces and leaves the project folder on disk. Worktrees that Paseo created for those workspaces can be deleted when they are archived. The confirm dialog tells you this before anything happens.
+Removing a project asks the daemon running the plugin to remove it, over the same local connection, because the plugin API has no call for it. Only that daemon's own projects can be removed this way. Paseo archives the project's workspaces and leaves the project folder on disk. Worktrees that Paseo created for those workspaces can be deleted when they are archived. The confirm dialog tells you this before anything happens.
 
-When a sub-project's parent disappears from the list, the plugin asks the daemon with `paseo daemon status` and `paseo project ls` whether the parent still exists. It cleans up only when the daemon says the parent is gone, so a list that is still loading never loses your nesting.
+When a sub-project's parent disappears from the list, the plugin asks the daemon over the same local connection whether the parent still exists. It cleans up only when the daemon says the parent is gone, so a list that is still loading never loses your nesting.
 
 ## Limits
 

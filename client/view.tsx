@@ -830,7 +830,7 @@ function GroupsList(view: PluginSidebarViewProps) {
     async (reference: ProjectRef, workspaceKeys: readonly string[]) => {
       setRemoving(true);
       try {
-        const result = await removeProjectCall({ projectId: reference.id });
+        const result = await removeProjectCall({ projectId: reference.id, hostId: reference.hostId });
         setDialog(null);
         toast.show(
           result.removedWorkspaceIds.length
