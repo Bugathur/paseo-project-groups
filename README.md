@@ -23,7 +23,7 @@ Installing does not change the sidebar. Open **Settings → Sidebar** and set **
 ## What you can do
 
 - Make groups with **New group** at the top of the sidebar, then drag projects into them.
-- Drag group headers to reorder groups. Fold the ones you aren't using.
+- Drag group headers to reorder groups. Fold the ones you aren't using, or fold and unfold everything at once from the toolbar.
 - Put a project under another project from its ⋯ menu (one level deep).
 - With several hosts connected, Ungrouped splits by host and grouped projects show a host tag.
 - Give groups and projects a color and an icon (any Lucide icon, searchable by name) or emoji. Workspaces get a color.
@@ -32,7 +32,7 @@ Installing does not change the sidebar. Open **Settings → Sidebar** and set **
 - See which agents started which: lines join a parent agent's workspace with its sub-agents' workspaces, and **By relation** shows all agents as a tree. Turn the lines off in the settings if you don't need them.
 - Move through the list with the keyboard in the desktop app and browser, including jumps to an agent's parent and siblings.
 - Use the ⋯ menus to move, rename, label, pin, archive or remove things, mark a workspace as read or unread, and open a project's settings.
-- Change text size, row height, space between groups and indentation per device, and how workspaces are sorted, titled and labeled, like in Paseo's own sidebar.
+- Change how workspaces are sorted, titled and labeled from a **Display** menu like the one in Paseo's own sidebar, and text size, row height, space between groups and indentation per device in the settings.
 - Read the plugin in English, Korean or Simplified Chinese.
 
 On a phone or tablet, long-press a name before dragging. A quick swipe scrolls the list.

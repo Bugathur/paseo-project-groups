@@ -22,6 +22,8 @@ Click **New group** at the top of the sidebar and type a name. Then drag project
 - Projects you haven't sorted yet sit under Ungrouped. New projects land there too.
 - Deleting a group leaves its projects alone. They go back to Ungrouped.
 
+The fold button in the toolbar folds every group, Ungrouped section, project and sub-project at once. Once everything is folded, it opens them all again.
+
 Folding a project or group hides its workspaces but not their status. The folded row shows the most urgent one on its icon: needs input, failed, running, or ready to review. Ungrouped does the same. If the workspace you have open is inside, the folded row also gets a light fill, so you can see where it went.
 
 The ⋯ button on a project moves it to another group, puts it under another project, starts a new workspace, opens its Project settings, copies its path or removes it. The ⋯ button on a workspace renames it, sets its labels, marks it as read or unread, pins it, copies the path or branch, or archives it. Project settings opens in the desktop app and in a browser; the phone app has no such item, because the plugin can't open that page there.
@@ -78,7 +80,7 @@ What you pick here only shows in this view and changes nothing in Paseo. Reset t
 
 ## Settings
 
-The sliders button at the right end of the toolbar opens the plugin's settings. You can change:
+The button at the right end of the toolbar opens a **Display** menu like the one in Paseo's own sidebar: how workspaces are sorted and titled, what shows under and next to their names, and whether background workspaces show. **Settings…** at the bottom of that menu opens the plugin's settings, where you can change:
 
 - text size, from 11 to 15 pt
 - row height
