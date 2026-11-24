@@ -1,7 +1,7 @@
 {
   "name": "paseo-project-groups",
   "private": true,
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "Sort Paseo sidebar projects into groups you can drag, fold and color.",
   "license": "MIT",
   "repository": {
