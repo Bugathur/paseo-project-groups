@@ -39,7 +39,49 @@ On a phone or tablet, long-press a name before dragging. A quick swipe scrolls t
 
 ## Requirements
 
-Paseo 0.16 or later on both the daemon and the app, with plugins enabled. Sidebar views arrived in 0.16, so older apps keep the default sidebar.
+Paseo 0.17.2 or later on both the daemon and the app, with plugins enabled. The development SDK is pinned to 0.17.2.
+
+## Last selected chat title
+
+Choose **Display → Title → Last selected chat title**, or the same choice in the plugin's appearance settings.
+When the focused chat's agent starts working (a transition to `running`), its existing title becomes the
+workspace's sidebar label. Browsing tabs, including switching to an already running chat, does not select
+a new title. New agents first observed running after the view was mounted also count as starts.
+The view must be mounted to observe starts; it does not reconstruct missed runs while the client is closed.
+
+The last working chat is remembered separately for each cross-host workspace. Renaming that chat updates
+the label even while a terminal, file, or another workspace is focused. Missing/deleted chats and empty
+chat titles fall back to the original workspace title/name. **Show → Branch** remains independent.
+Only an agent reference is saved, in the device-scoped `chat-titles` settings document; titles are read
+reactively from Paseo. No workspace metadata or branch is renamed.
+
+### API compatibility
+
+Checked against the published `@getpaseo/plugin@0.17.2` declarations (not just current website docs):
+`PluginSidebarViewProps.active.agent/workspace`, `useAgents`, `useAgent`, agent snapshot
+`status/title/workspace`, cross-host refs, and device-scoped `defineSettings`/`useSettings` are present.
+The implementation uses subscriptions, with no DOM injection or activity polling.
+
+## Local installation / updating this fork
+
+Keep the installation ID **project-groups**: groups, decorations, appearance, and folding are associated
+with that ID and their existing settings document IDs. Do not uninstall/remove the plugin to update it.
+On the daemon host, from this checkout:
+
+```bash
+npm ci
+npm run typecheck
+npm test
+paseo plugin install "$PWD" --id project-groups
+paseo plugin reload project-groups
+```
+
+Use the existing installation's daemon home (`--home`) or endpoint (`--host`) if it is not the default.
+The directory must exist on the daemon host. Keep it available for subsequent reloads. After editing
+an already installed local checkout, run `paseo plugin reload project-groups` again.
+Select **Settings → Sidebar → View → Project groups**, then enable the new title mode.
+For multiple daemons, install the fork on each relevant host using the same installation ID.
+The new selection history is per client device; existing host-scoped groups and colors retain their scope.
 
 ## Data
 

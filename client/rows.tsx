@@ -20,6 +20,7 @@ import { ProjectIcon } from "./project-icon";
 import { RunningSpinner } from "./running-spinner";
 import { sidebarNavProps } from "./web";
 import type { ProjectGroup } from "../shared/settings";
+import { useChatTitle } from "./chat-title";
 
 type Theme = PluginSidebarViewProps["theme"];
 
@@ -629,8 +630,9 @@ export function WorkspaceRow({
   const hover = useHover(view.layout);
   const t = useT();
   const nameColor = useDecorations().get("workspaces", reference.key).color;
+  const chatTitle = useChatTitle(reference.key);
   const workspace = useWorkspace(reference, (item) => ({
-    title: (look.workspaceTitle === "branch" ? item.branch : null) ?? item.title ?? item.name,
+    title: (look.workspaceTitle === "chat" ? chatTitle : look.workspaceTitle === "branch" ? item.branch : null) ?? item.title ?? item.name,
     indicator: item.indicator,
     indicatorLabel: item.indicatorLabel,
     additions: item.diffStat?.additions ?? 0,

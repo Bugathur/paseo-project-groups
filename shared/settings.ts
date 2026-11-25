@@ -43,7 +43,7 @@ export const INDENTS = ["narrow", "normal", "wide"] as const;
 export const GROUP_SPACINGS = ["none", "small", "medium", "large", "xlarge"] as const;
 export const LANGUAGES = ["auto", "en", "ko", "zh-CN"] as const;
 export const WORKSPACE_SORTS = ["name", "created", "lastPrompt"] as const;
-export const WORKSPACE_TITLES = ["title", "branch"] as const;
+export const WORKSPACE_TITLES = ["title", "branch", "chat"] as const;
 export const ROW_TRAILINGS = ["diff", "timestamp", "none"] as const;
 
 /** Sidebar look. Device scope because text size and spacing depend on the screen. */
@@ -91,6 +91,17 @@ export const appearanceDocument = defineSettings({
 export type AppearanceValues = z.infer<typeof appearanceDocument.schema>;
 export type WorkspaceSort = (typeof WORKSPACE_SORTS)[number];
 export type WorkspaceTitle = (typeof WORKSPACE_TITLES)[number];
+/** Last working chat per cross-host workspace, independent of groups and appearance. */
+export const chatTitlesDocument = defineSettings({
+  id: "chat-titles",
+  scope: "device",
+  version: 1,
+  schema: z.object({
+    selected: z.record(z.string(), z.object({
+      kind: z.literal("agent"), hostId: z.string(), id: z.string(), key: z.string(),
+    })).default({}),
+  }),
+});
 export type RowTrailing = (typeof ROW_TRAILINGS)[number];
 
 /** A color and/or icon the user chose for one sidebar item. Null means "use the default". */
