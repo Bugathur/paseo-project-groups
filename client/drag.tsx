@@ -161,20 +161,15 @@ export function useDragController(
       if (speed === 0) stopScrolling();
     };
 
-    const start = (next: DragSubject, pageY: number) => {
+    const measure = () => {
+      if (!active) return;
       session += 1;
       const mine = session;
-      active = next;
       current = null;
-      lastPageY = pageY;
       scrollAtStart = scrollY;
       measured = [];
       measuring = true;
-      setSubject(next);
       setHit(null);
-      // A browser ends the row press, which unlocks scrolling, just before this grant. Lock
-      // again so the list does not scroll under a finger that is dragging.
-      if (!mousePress) setScrollLocked(true);
       const entries = [...nodes.values()];
       let remaining = entries.length;
       const finish = () => {
@@ -204,6 +199,16 @@ export function useDragController(
         ghostY.setValue(lastPageY - viewportTop - GHOST_OFFSET);
         measureSlots();
       });
+    };
+
+    const start = (next: DragSubject, pageY: number) => {
+      active = next;
+      lastPageY = pageY;
+      measuring = true;
+      setSubject(next);
+      setHit(null);
+      if (!mousePress) setScrollLocked(true);
+      // Measurement runs after React commits newly visible drop targets.
     };
 
     const move = (pageY: number) => {
@@ -268,6 +273,7 @@ export function useDragController(
       },
       onContentHeight(height) {
         contentHeight = height;
+        if (active) measure();
       },
     };
 
@@ -305,8 +311,13 @@ export function useDragController(
       surfaceHandlers: surface.panHandlers,
       cancel: () => end(false),
       notePointer,
+      measure,
     };
   }, [ghostY, scroll, viewport]);
+
+  useEffect(() => {
+    if (subject) engine.measure();
+  }, [engine, subject]);
 
   useEffect(() => {
     // pointerdown fires before the touch or mouse events the responder system reads.

@@ -21,6 +21,7 @@ import { RunningSpinner } from "./running-spinner";
 import { sidebarNavProps } from "./web";
 import type { ProjectGroup } from "../shared/settings";
 import { useChatTitle } from "./chat-title";
+import { useWorkspacePathHover } from "./workspace-tooltip";
 
 type Theme = PluginSidebarViewProps["theme"];
 
@@ -645,7 +646,9 @@ export function WorkspaceRow({
     branch: item.branch,
     labels: item.labels,
     enteredAt: item.statusEnteredAt,
+    directory: item.directory,
   }));
+  const pathHover = useWorkspacePathHover(workspace?.directory);
   const open = useCallback(() => view.navigation.openWorkspace(reference), [view.navigation, reference]);
   if (!workspace) return null;
   const branch = look.showBranch && workspace.branch && workspace.branch !== workspace.title ? workspace.branch : null;
@@ -665,6 +668,7 @@ export function WorkspaceRow({
   return (
     <Pressable
       {...sidebarNavProps({ pgNav: "", ...(relation ? { pgAgent: relation.key } : {}) })}
+      ref={pathHover.ref}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       accessibilityLabel={
@@ -673,8 +677,8 @@ export function WorkspaceRow({
           : t("workspace.open", { name: workspace.title })
       }
       onPress={relation?.open ?? open}
-      onHoverIn={() => { hover.onHoverIn(); relation?.onHover(true); }}
-      onHoverOut={() => { hover.onHoverOut(); relation?.onHover(false); }}
+      onHoverIn={() => { hover.onHoverIn(); pathHover.onHoverIn(); relation?.onHover(true); }}
+      onHoverOut={() => { hover.onHoverOut(); pathHover.onHoverOut(); relation?.onHover(false); }}
       style={[
         styles.row, styles.rounded, { paddingLeft: indent },
         active ? styles.selected : relation?.highlighted && { backgroundColor: view.theme.colors.surface1 },

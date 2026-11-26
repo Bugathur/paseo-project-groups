@@ -20,6 +20,7 @@ import { familyColor, withAlpha } from "./relationship-rail";
 import { agentIndicator } from "./model";
 import { StatusDot, WorkspaceRow, indicatorColor, useRowStyles } from "./rows";
 import { sidebarNavProps } from "./web";
+import { useWorkspacePathHover } from "./workspace-tooltip";
 
 export interface RelationshipActions {
   view: PluginSidebarViewProps;
@@ -194,7 +195,9 @@ function AgentRowContent({
     additions: item.diffStat?.additions ?? 0,
     deletions: item.diffStat?.deletions ?? 0,
     indicator: item.indicator,
+    directory: item.directory,
   }));
+  const pathHover = useWorkspacePathHover(workspace?.directory);
   const [hovered, setHovered] = useState(false);
   const { view, model } = sidebar;
   const theme = view.theme;
@@ -241,15 +244,18 @@ function AgentRowContent({
         />
         <Pressable
           {...sidebarNavProps({ pgNav: "", pgAgent: agent.key })}
+          ref={pathHover.ref}
           accessibilityRole="button"
           accessibilityState={{ selected: active }}
           accessibilityLabel={t("workspace.open", { name: title })}
           onPress={() => sidebar.open(agent)}
           onHoverIn={() => {
+            pathHover.onHoverIn();
             setHovered(true);
             sidebar.hover(agent.key);
           }}
           onHoverOut={() => {
+            pathHover.onHoverOut();
             setHovered(false);
             sidebar.hover(null);
           }}

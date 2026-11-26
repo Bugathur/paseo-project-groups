@@ -89,3 +89,38 @@ test("a short press leaves the press to the row", async () => {
   await settle();
   assert.equal(pressed.count, 0);
 });
+
+test("a drop target mounted when dragging starts is measured and accepts the drop", () => {
+  const actual = load("drag.tsx", {
+    react: React,
+    "react-native": {
+      Animated: { Value: class { setValue() {} } },
+      PanResponder: { create: handlers => ({ panHandlers: handlers }) },
+      Platform: { OS: "web" },
+    },
+    "./hit": load("hit.ts", {}),
+  });
+  const viewport = { current: null }, scroll = { current: null };
+  const drops = [];
+  let state, tree;
+  const project = { kind: "project", key: '["h","p"]', label: "Project" };
+  function App() {
+    state = actual.useDragController(viewport, scroll, (subject, target) => drops.push(target));
+    return state.subject ? React.createElement("View", {
+      ref: node => state.controller.register("ungrouped", { kind: "ungrouped" }, node),
+    }) : null;
+  }
+  act(() => { tree = create(React.createElement(App), {
+    createNodeMock: () => ({ measureInWindow: cb => cb(0, 100, 200, 30) }),
+  }); });
+  act(() => {
+    state.controller.press(project);
+    state.surfaceHandlers.onPanResponderGrant({}, { moveY: 110 });
+  });
+  assert.equal(state.hit.target.kind, "ungroup");
+  act(() => state.surfaceHandlers.onPanResponderRelease());
+  assert.equal(drops.length, 1);
+  assert.equal(drops[0].kind, "ungroup");
+  assert.equal(tree.toJSON(), null);
+  act(() => tree.unmount());
+});

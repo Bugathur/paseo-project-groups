@@ -44,6 +44,7 @@ function loadClient(file, host = {}) {
       useToast: () => ({ show: noop, error: noop }),
     },
     "./chat-title": { useChatTitle: () => null },
+    "./workspace-tooltip": { useWorkspacePathHover: () => ({ ref: null, onHoverIn() {}, onHoverOut() {} }) },
     "./i18n": { useT: () => (key) => key },
     "./model": { mostUrgent: () => "done", compareWorkspaceTimes: () => () => 0, compactTimeAgo: () => "" },
     "./project-icon": { ProjectIcon: "ProjectIcon" },
