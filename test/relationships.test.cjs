@@ -104,6 +104,7 @@ function makeHarness({
   groups = [],
   parents = {},
   collapsed = [],
+  appearance = {},
   activeAgent = null,
   activeWorkspace = null,
 } = {}) {
@@ -226,7 +227,7 @@ function makeHarness({
       return {
         status: "ready",
         revision: "a1",
-        values: doc.schema.parse({}),
+        values: doc.schema.parse(doc.id === "appearance" ? appearance : {}),
         saving: false,
         saveError: null,
         save: async () => true,
@@ -480,6 +481,30 @@ test("Ungrouped is hidden when empty and appears when projects are outside group
   const ungroupedTree = ungrouped.mount();
   t.after(() => ungrouped.unmount());
   assert.ok(headerTexts(ungroupedTree).length > 0);
+});
+
+test("nested groups render recursively and collapsed parents hide their descendants", (t) => {
+  const data = sampleCrossProjectData();
+  const groups = [{ id: "root", name: "Root", projects: [] }, ...data.groups.map(group => ({ ...group, parentId: "root" }))];
+  const h = makeHarness({ ...data, groups }); const renderer = h.mount();
+  t.after(() => h.unmount());
+  assert.ok(textOf(renderer.toJSON()).includes("MOM"));
+  const button = renderer.root.findByProps({ accessibilityLabel: "收起Root", accessibilityRole: "button" });
+  act(() => button.props.onPress());
+  assert.equal(textOf(renderer.toJSON()).includes("MOM"), false);
+});
+
+test("host sections and compact rows retain workspace navigation and separate hosts", (t) => {
+  const data = sampleCrossProjectData();
+  const h = makeHarness({ ...data, appearance: { groupByHost: true, compactProjects: true } });
+  const renderer = h.mount(); t.after(() => h.unmount());
+  const text = textOf(renderer.toJSON());
+  assert.ok(text.includes("MacBook")); assert.ok(text.includes("Linux Box"));
+  assert.ok(text.includes("mom_cli: "));
+  const row = renderer.root.findAll(node => node.type === "Pressable" &&
+    node.props.accessibilityLabel?.includes("MOM CLI") && node.props.accessibilityLabel?.startsWith("打开"))[0];
+  assert.ok(row); act(() => row.props.onPress());
+  assert.ok(h.openedAgents.length + h.openedWorkspaces.length > 0);
 });
 
 test("relationship-model keeps the model order without a comparator and tracks multi-level guides", () => {

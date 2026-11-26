@@ -35,6 +35,22 @@ Installing does not change the sidebar. Open **Settings → Sidebar** and set **
 - Change how workspaces are sorted, titled and labeled from a **Display** menu like the one in Paseo's own sidebar, and text size, row height, space between groups and indentation per device in the settings.
 - Read the plugin in English, Korean or Simplified Chinese.
 
+### Nested groups and host sections
+
+In the plugin's appearance settings, enable **Group projects by host** to show collapsible host
+sections inside each group. Enable **Compact project/workspace rows** to replace the separate
+project heading with rows such as `agent1: Workspace title`. Both options are off by default.
+The compact row's grip opens the project menu and supports dragging the whole project; the
+workspace's own menu remains on the right. Empty projects retain their normal project row.
+
+Use a group's **⋯** menu to create a subgroup, move the group under another group, or move it to
+the top level. Group destinations show full paths. Drag a group to the middle of another group
+header to nest it, or near its top/bottom edge to reorder it at that level. Cyclic nesting is rejected.
+Deleting a group promotes its subgroups one level and moves its projects to its parent, or Ungrouped
+for a root group. Existing groups, colors, folds, and project identities are preserved.
+Host sections only change presentation: dropping a project there assigns the containing group,
+never transfers the project to another daemon. The By relation view retains its agent tree.
+
 On a phone or tablet, long-press a name before dragging. A quick swipe scrolls the list.
 
 ## Requirements

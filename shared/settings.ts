@@ -6,6 +6,7 @@ export const groupSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
   projects: z.array(z.string()).default([]),
+  parentId: z.string().nullable().optional(),
 });
 
 export type ProjectGroup = z.infer<typeof groupSchema>;
@@ -61,6 +62,8 @@ export const appearanceDocument = defineSettings({
     showProjectIcons: z.boolean().default(true),
     /** With several hosts connected, a host name tag after each project in a group. */
     showHostTags: z.boolean().default(true),
+    groupByHost: z.boolean().default(false),
+    compactProjects: z.boolean().default(false),
     showStatusDots: z.boolean().default(true),
     /** A folded project or group shows its most urgent workspace status on its icon. */
     showFoldedStatus: z.boolean().default(true),

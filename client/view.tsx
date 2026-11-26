@@ -10,7 +10,7 @@ import {
   type ProjectRef,
   type WorkspaceRef,
 } from "@getpaseo/plugin/client";
-import { Icon, ScrollView, useToast } from "@getpaseo/plugin/client/ui";
+import { Icon, Modal, ScrollView, useToast } from "@getpaseo/plugin/client/ui";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Animated, Platform, Pressable, Text, View, type ScrollView as NativeScrollView } from "react-native";
 import { projectIdsRpc, removeProjectRpc } from "../shared/rpc";
@@ -65,6 +65,7 @@ import {
 import {
   EmptyGroupRow,
   GroupHeader,
+  HostSection,
   ProjectBlock,
   SectionHeading,
   TextButton,
@@ -78,6 +79,7 @@ import { RelationshipRail, useRelationshipRail } from "./relationship-rail";
 import { RelationshipWorkspace, RelationshipsList, type RelationshipActions } from "./relationships";
 import { bindSidebarKeys } from "./web";
 import { ChatTitles } from "./chat-title";
+import { groupAncestors, groupParent, groupPath, moveGroupInto } from "./group-tree";
 import { WorkspaceTooltipProvider, useWorkspaceTooltip } from "./workspace-tooltip";
 
 const UNGROUPED_KEY = "u";
@@ -105,6 +107,7 @@ const EMPTY_DECORATIONS: DecorationsValues = { groups: {}, projects: {}, workspa
 type Theme = PluginSidebarViewProps["theme"];
 
 type Dialog =
+  | { kind: "group-menu"; group: ProjectGroup }
   | { kind: "project"; reference: ProjectRef }
   | { kind: "remove-project"; reference: ProjectRef }
   | { kind: "workspace"; reference: WorkspaceRef }
@@ -474,7 +477,7 @@ function GroupsList(view: PluginSidebarViewProps) {
   const hostIds = useMemo(() => {
     const seen: string[] = [];
     for (const key of order) {
-      const id = parseProjectKey(key)?.hostId;
+      const id = byKey.get(key)?.hostId ?? parseProjectKey(key)?.hostId;
       if (id && !seen.includes(id)) seen.push(id);
     }
     // The app's host order keeps the sections steady while hosts connect.
@@ -483,7 +486,7 @@ function GroupsList(view: PluginSidebarViewProps) {
       return index < 0 ? hosts.length : index;
     };
     return seen.sort((left, right) => rank(left) - rank(right));
-  }, [hosts, order]);
+  }, [hosts, order, byKey]);
   const multiHost = hostIds.length > 1;
   const hostLabel = useCallback(
     (id: string) => hosts.find((host) => host.serverId === id)?.label || id,
@@ -609,10 +612,11 @@ function GroupsList(view: PluginSidebarViewProps) {
   const foldKeys = useMemo(
     () => [
       ...groups.map((group) => `g:${group.id}`),
+      ...(look.groupByHost ? groups.flatMap(group => hostIds.map(id => `h:${JSON.stringify([group.id, id])}`)) : []),
       ...ungroupedSections.map((section) => section.foldKey),
       ...order.map((key) => `p:${key}`),
     ],
-    [groups, order, ungroupedSections],
+    [groups, order, ungroupedSections, hostIds, look.groupByHost],
   );
   const allFolded = foldKeys.every((key) => collapsed.has(key));
   const foldAll = useCallback(() => {
@@ -646,10 +650,18 @@ function GroupsList(view: PluginSidebarViewProps) {
         if (next) void savePlacement(next);
         return;
       }
-      const next = target.kind === "group-at" ? moveGroup(groups, subject.id, target.index) : null;
-      if (next) void saveGroups(next);
+      if (target.kind === "group-into") {
+        const next = moveGroupInto(groups, subject.id, target.groupId);
+        if (next) { void saveGroups(next); reveal([`g:${target.groupId}`]); }
+      } else if (target.kind === "group-at") {
+        const parentId = target.parentId ?? null;
+        if (parentId === subject.id || (parentId && groupAncestors(groups, parentId).includes(subject.id))) return;
+        const moved = moveGroup(groups, subject.id, target.index) ?? [...groups];
+        const next = moveGroupInto(moved, subject.id, parentId) ?? moved;
+        void saveGroups(next);
+      }
     },
-    [groups, parents, saveGroups, savePlacement],
+    [groups, parents, saveGroups, savePlacement, reveal],
   );
 
   const viewportRef = useRef<View>(null);
@@ -688,13 +700,20 @@ function GroupsList(view: PluginSidebarViewProps) {
       const containingProject = parents[project];
       const folds = [`p:${project}`];
       if (containingProject) folds.push(`p:${containingProject}`);
-      if (section !== undefined) folds.push(section === null ? ungroupedKeyOf(project) : `g:${section}`);
+      if (section !== undefined) {
+        folds.push(section === null ? ungroupedKeyOf(project) : `g:${section}`);
+        if (section) {
+          folds.push(...groupAncestors(groups, section).map(id => `g:${id}`));
+          const hostId = byKey.get(containingProject ?? project)?.hostId ?? parseProjectKey(project)?.hostId;
+          if (hostId) folds.push(`h:${JSON.stringify([section, hostId])}`);
+        }
+      }
       wasCollapsed = folds.some((foldKey) => collapsed.has(foldKey));
       if (wasCollapsed) reveal(folds);
     }
     revealAgent(agent.key, { focus: true, wasCollapsed });
     view.navigation.openAgent(agent);
-  }, [byRelation, collapsed, layout, parents, relationships, reveal, revealAgent, ungroupedKeyOf, view.navigation, workspaceProjects]);
+  }, [byKey, byRelation, collapsed, groups, layout, parents, relationships, reveal, revealAgent, ungroupedKeyOf, view.navigation, workspaceProjects]);
 
   useEffect(() => bindSidebarKeys(viewportRef.current, (key, direction) => {
     const parent = relationships.parents.get(key);
@@ -724,14 +743,15 @@ function GroupsList(view: PluginSidebarViewProps) {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   };
 
-  const createGroup = useCallback(() => {
+  const createGroup = useCallback((parentId: string | null = null) => {
     const created = addGroup(
       groups,
       nextGroupName(groups, (number) => t("group.defaultName", { number })),
     );
     setRenamingId(created.id);
-    void saveGroups(created.groups);
-  }, [groups, saveGroups, t]);
+    void saveGroups(created.groups.map(group => group.id === created.id ? { ...group, parentId } : group));
+    if (parentId) reveal([parentId, ...groupAncestors(groups, parentId)].map(id => `g:${id}`));
+  }, [groups, saveGroups, t, reveal]);
 
   const rename = useCallback(
     (id: string, name: string) => {
@@ -794,7 +814,10 @@ function GroupsList(view: PluginSidebarViewProps) {
       );
       if (!next) return;
       void savePlacement(next);
-      reveal([groupId === null ? ungroupedKeyOf(reference.key) : `g:${groupId}`]);
+      reveal(groupId === null ? [ungroupedKeyOf(reference.key)] : [
+        `g:${groupId}`, ...groupAncestors(groups, groupId).map(id => `g:${id}`),
+        `h:${JSON.stringify([groupId, reference.hostId])}`,
+      ]);
     },
     [groups, parents, reveal, savePlacement, ungroupedKeyOf],
   );
@@ -953,11 +976,11 @@ function GroupsList(view: PluginSidebarViewProps) {
     refresh,
   };
   // With relationships off, the project view shows plain rows: no lines, child count or highlight.
-  const renderWorkspace = (reference: WorkspaceRef, indent: number) =>
+  const renderWorkspace = (reference: WorkspaceRef, indent: number, projectPrefix?: string) =>
     look.showRelations ? (
-      <RelationshipWorkspace key={reference.key} reference={reference} indent={indent} sidebar={sidebar} onMenu={openWorkspaceMenu} />
+      <RelationshipWorkspace key={reference.key} reference={reference} indent={indent} sidebar={sidebar} onMenu={openWorkspaceMenu} projectPrefix={projectPrefix} />
     ) : (
-      <WorkspaceRow key={reference.key} reference={reference} indent={indent} view={view} onMenu={openWorkspaceMenu} />
+      <WorkspaceRow key={reference.key} reference={reference} indent={indent} view={view} onMenu={openWorkspaceMenu} projectPrefix={projectPrefix} />
     );
 
   const projectBlock = (reference: ProjectRef, groupId: string | null, nested = false): ReactNode => {
@@ -978,11 +1001,45 @@ function GroupsList(view: PluginSidebarViewProps) {
         onMenu={openProjectMenu}
         renderWorkspace={renderWorkspace}
         // Inside a host's own Ungrouped section the header already names the host.
-        hostLabel={multiHost && look.showHostTags && groupId !== null ? hostLabel(reference.hostId) : null}
+        hostLabel={multiHost && look.showHostTags && !look.groupByHost && groupId !== null ? hostLabel(reference.hostId) : null}
       >
         {children.map((child) => projectBlock(child, groupId, true))}
       </ProjectBlock>
     );
+  };
+
+  const groupProjectKeys = (id: string): string[] => groups
+    .filter(group => group.id === id || groupAncestors(groups, group.id).includes(id))
+    .flatMap(group => layout.groups.get(group.id) ?? []);
+
+  const renderGroup = (group: ProjectGroup, depth: number, index: number): ReactNode => {
+    const members = refsOf(layout.groups.get(group.id) ?? []);
+    const children = groups.filter(child => groupParent(groups, child.id) === group.id);
+    const folded = collapsed.has(`g:${group.id}`);
+    return <View key={group.id} style={{ marginLeft: depth ? 10 : 0 }}>
+      {index > 0 || (!depth && pinned.length) ? <View style={{ height: look.groupGap }} /> : null}
+      <GroupHeader group={{ ...group, parentId: groupParent(groups, group.id) }}
+        groupIndex={groups.findIndex(item => item.id === group.id)} statusKeys={withSubProjects(groupProjectKeys(group.id))}
+        count={groupProjectKeys(group.id).length} collapsed={folded}
+        renaming={renamingId === group.id} dragging={draggingKey === group.id} view={view}
+        onToggle={toggleGroup} onStartRename={setRenamingId} onRename={rename}
+        onCancelRename={cancelRename} onDelete={requestDelete}
+        onMenu={(selected) => setDialog({ kind: "group-menu", group: selected })} />
+      {folded ? null : <>
+        {children.map((child, position) => renderGroup(child, depth + 1, position))}
+        {look.groupByHost ? hostIds.map(id => {
+          const projects = members.filter(project => project.hostId === id);
+          if (!projects.length) return null;
+          const key = `h:${JSON.stringify([group.id, id])}`;
+          const closed = collapsed.has(key);
+          return <HostSection key={key} groupId={group.id} hostId={id} title={hostLabel(id)}
+            projects={withSubProjects(projects.map(project => project.key))} collapsed={closed} view={view} onToggle={() => toggle(key)}>
+            {projects.map(project => projectBlock(project, group.id))}
+          </HostSection>;
+        }) : members.map(project => projectBlock(project, group.id))}
+        {!members.length && !children.length ? <EmptyGroupRow groupId={group.id} view={view} /> : null}
+      </>}
+    </View>;
   };
 
   return (
@@ -1031,34 +1088,7 @@ function GroupsList(view: PluginSidebarViewProps) {
                     </View>
                   ) : null}
 
-                  {groups.map((group, index) => {
-                    const members = refsOf(layout.groups.get(group.id) ?? []);
-                    const folded = collapsed.has(`g:${group.id}`);
-                    return (
-                      <Fragment key={group.id}>
-                        {index > 0 || pinned.length ? <View style={{ height: look.groupGap }} /> : null}
-                        <GroupHeader
-                          group={group}
-                          statusKeys={withSubProjects(members.map((reference) => reference.key))}
-                          count={members.length}
-                          collapsed={folded}
-                          renaming={renamingId === group.id}
-                          dragging={draggingKey === group.id}
-                          view={view}
-                          onToggle={toggleGroup}
-                          onStartRename={setRenamingId}
-                          onRename={rename}
-                          onCancelRename={cancelRename}
-                          onDelete={requestDelete}
-                        />
-                        {folded ? null : members.length ? (
-                          members.map((reference) => projectBlock(reference, group.id))
-                        ) : (
-                          <EmptyGroupRow groupId={group.id} view={view} />
-                        )}
-                      </Fragment>
-                    );
-                  })}
+                  {groups.filter(group => groupParent(groups, group.id) === null).map((group, index) => renderGroup(group, 0, index))}
 
                   {/* Empty Ungrouped is only needed as a drop target while moving a project. */}
                   {ungroupedSections.filter((section) => section.keys.length > 0 || drag.subject?.kind === "project").map((section, index) => (
@@ -1097,6 +1127,23 @@ function GroupsList(view: PluginSidebarViewProps) {
           </View>
         </View>
 
+        {dialog?.kind === "group-menu" ? <Modal title={groupPath(groups, dialog.group.id)} open
+          onOpenChange={(open) => { if (!open) closeDialog(); }}>
+          <Modal.Content contentContainerStyle={{ padding: 8 }}>
+            <TextButton icon="FolderPlus" label={t("group.newChild")} view={view}
+              onPress={() => { const id = dialog.group.id; closeDialog(); createGroup(id); }} />
+            {[null, ...groups.map(group => group.id)].map(parentId => {
+              const next = moveGroupInto(groups, dialog.group.id, parentId);
+              if (!next) return null;
+              return <TextButton key={parentId ?? "root"} icon="CornerLeftUp"
+                label={parentId ? `${t("group.moveTo")} ${groupPath(groups, parentId)}` : t("group.root")}
+                view={view} onPress={() => {
+                  closeDialog(); void saveGroups(next);
+                  if (parentId) reveal([parentId, ...groupAncestors(groups, parentId)].map(id => `g:${id}`));
+                }} />;
+            })}
+          </Modal.Content>
+        </Modal> : null}
         {dialog?.kind === "project" ? (
           <ProjectMenuDialog
             reference={dialog.reference}

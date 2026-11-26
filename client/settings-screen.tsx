@@ -205,6 +205,10 @@ export function AppearanceSettings({ theme }: PluginSurfaceProps) {
 
       <SettingsSection title={t("settings.workspaces")}>
         <SettingsCard>
+          <SettingsSwitch label={t("settings.groupByHost")} value={values.groupByHost}
+            onValueChange={(groupByHost) => update({ groupByHost })} />
+          <SettingsSwitch label={t("settings.compactProjects")} value={values.compactProjects}
+            onValueChange={(compactProjects) => update({ compactProjects })} />
           <SettingsSelect
             label={t("settings.workspaceSort")}
             value={values.workspaceSort}
