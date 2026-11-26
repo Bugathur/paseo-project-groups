@@ -468,7 +468,7 @@ function sampleCrossProjectData() {
   };
 }
 
-test("relationship-model orders connected families before standalone agents and tracks multi-level guides", () => {
+test("relationship-model keeps the model order without a comparator and tracks multi-level guides", () => {
   const load = createLoader();
   const model = load("client/relationship-model.ts");
   const solo = ref("agent", "h1", "solo");
@@ -488,12 +488,36 @@ test("relationship-model orders connected families before standalone agents and 
   ]);
 
   const rows = plain(model.relationshipRows(rel));
-  assert.deepEqual(rows.map((r) => r.agent.id), ["root", "c1", "g1", "c2", "solo"]);
-  assert.deepEqual(rows.map((r) => r.depth), [0, 1, 2, 1, 0]);
-  assert.deepEqual(rows.map((r) => r.last), [true, false, true, true, true]);
-  assert.deepEqual(rows[2].guides, [true], "grandchild under non-last child keeps ancestor vertical guide");
+  assert.deepEqual(rows.map((r) => r.agent.id), ["solo", "root", "c1", "g1", "c2"]);
+  assert.deepEqual(rows.map((r) => r.depth), [0, 0, 1, 2, 1]);
+  assert.deepEqual(rows.map((r) => r.last), [true, true, false, true, true]);
+  assert.deepEqual(rows[3].guides, [true], "grandchild under non-last child keeps ancestor vertical guide");
   assert.equal(model.activeFamily(rel, c1.key).parent.key, root.key);
   assert.equal(model.activeFamily(rel, solo.key), null);
+});
+
+test("relationship-model sorts roots and each family's children with the same comparator", () => {
+  const load = createLoader();
+  const model = load("client/relationship-model.ts");
+  const names = { a: "À", b: "B", c: "c", d: "d", e: "e" };
+  const agent = (id) => ref("agent", "h1", id);
+  const [a, b, c, d, e] = ["a", "b", "c", "d", "e"].map(agent);
+
+  // Listed in the reverse order; c and e are subagents of a, in other workspaces.
+  const rel = model.agentRelationships([
+    { key: "w:h1:w-e", items: [e] },
+    { key: "w:h1:w-d", items: [d] },
+    { key: "w:h1:w-c", items: [c] },
+    { key: "w:h1:w-b", items: [b] },
+    { key: "w:h1:w-a", items: [a] },
+    { key: `a:${a.key}`, items: [e, c] },
+  ]);
+  const byName = (left, right) => names[left.id].localeCompare(names[right.id]);
+
+  const rows = plain(model.relationshipRows(rel, byName));
+  assert.deepEqual(rows.map((r) => r.agent.id), ["a", "c", "e", "b", "d"]);
+  assert.deepEqual(rows.map((r) => r.depth), [0, 1, 1, 0, 0]);
+  assert.deepEqual(rows.map((r) => r.last), [true, false, true, true, true]);
 });
 
 test("project view keeps workspace rows as the single entry without duplicate drawers/chips and never scrolls on click", async (t) => {
@@ -753,6 +777,29 @@ test("By relation view displays clickable tree rows with full project names, no 
   });
   assert.deepEqual(harness.openedAgents, [data.refs.aPerm]);
   assert.equal(harness.scrollCalls.length, 0, "clicking a tree row must not call scrollTo");
+});
+
+test("By relation status dots match By project: a workspace's only agent shows the workspace status", (t) => {
+  const data = sampleCrossProjectData();
+  // The agents look idle, but their workspaces carry Paseo's status (unread finish, needs input).
+  const workspaces = data.workspaces.map((item) =>
+    item.id === "ws-rep" ? { ...item, indicator: "attention" } : item.id === "ws-perm" ? { ...item, indicator: "needs_input" } : item);
+  const agents = data.agents.map((item) => ({ ...item, status: "idle", requiresAttention: false }));
+  const harness = makeHarness({
+    projects: data.projects, workspaces, agents, groups: data.groups, activeAgent: null, activeWorkspace: null,
+  });
+  const renderer = harness.mount();
+  t.after(() => harness.unmount());
+  act(() => renderer.root.findByProps({ accessibilityLabel: "按关系", accessibilityRole: "button" }).props.onPress());
+
+  const dotColor = (label) => {
+    const row = renderer.root.findByProps({ accessibilityLabel: label, accessibilityRole: "button" });
+    const dot = row.findAll((node) => node.type === "View" && node.props.style?.width === 6 && node.props.style?.height === 6);
+    return dot[0]?.props.style.backgroundColor;
+  };
+  assert.equal(dotColor("打开MOM报表"), theme.colors.statusSuccess, "unread finish is green, as in By project");
+  assert.equal(dotColor("打开MOM 权限工作台"), theme.colors.statusWarning, "needs input is orange");
+  assert.equal(dotColor("打开MOM CLI"), "transparent");
 });
 
 test("always-visible rail uses deterministic family color, promotes active/hovered family, echoes ChildBadge color, and respects collapsed folds", async (t) => {
