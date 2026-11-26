@@ -78,6 +78,7 @@ import { RelationshipRail, useRelationshipRail } from "./relationship-rail";
 import { RelationshipWorkspace, RelationshipsList, type RelationshipActions } from "./relationships";
 import { bindSidebarKeys } from "./web";
 import { ChatTitles } from "./chat-title";
+import { WorkspaceTooltipProvider, useWorkspaceTooltip } from "./workspace-tooltip";
 
 const UNGROUPED_KEY = "u";
 const WEB = Platform.OS === "web";
@@ -348,12 +349,15 @@ export function GroupsView(view: PluginSidebarViewProps) {
   );
   return (
     <LookContext.Provider value={look}>
-      <ChatTitles active={view.active}><GroupsList {...view} /></ChatTitles>
+      <WorkspaceTooltipProvider theme={view.theme}>
+        <ChatTitles active={view.active}><GroupsList {...view} /></ChatTitles>
+      </WorkspaceTooltipProvider>
     </LookContext.Provider>
   );
 }
 
 function GroupsList(view: PluginSidebarViewProps) {
+  const { hide: hideTooltip } = useWorkspaceTooltip();
   const groupsState = useSettings(groupsDocument);
   const layoutState = useSettings(layoutDocument);
   const decorationsState = useSettings(decorationsDocument);
@@ -652,6 +656,7 @@ function GroupsList(view: PluginSidebarViewProps) {
   const contentRef = useRef<View>(null);
   const scrollRef = useRef<NativeScrollView>(null);
   const drag = useDragController(viewportRef, scrollRef, onDrop);
+  useEffect(() => { if (drag.subject) hideTooltip(); }, [drag.subject, hideTooltip]);
   const railFamilies = useMemo(
     () => (byRelation || !look.showRelations ? [] : families),
     [byRelation, families, look.showRelations],
@@ -1003,6 +1008,7 @@ function GroupsList(view: PluginSidebarViewProps) {
               scrollEnabled={!drag.scrollLocked}
               scrollEventThrottle={16}
               onScroll={(event) => {
+                hideTooltip();
                 const y = event.nativeEvent.contentOffset.y;
                 drag.controller.onScroll(y);
                 onRailScroll(y);
@@ -1054,7 +1060,8 @@ function GroupsList(view: PluginSidebarViewProps) {
                     );
                   })}
 
-                  {ungroupedSections.map((section, index) => (
+                  {/* Empty Ungrouped is only needed as a drop target while moving a project. */}
+                  {ungroupedSections.filter((section) => section.keys.length > 0 || drag.subject?.kind === "project").map((section, index) => (
                     <Fragment key={section.foldKey}>
                       {index > 0 || groups.length || pinned.length ? (
                         <View style={{ height: look.groupGap }} />

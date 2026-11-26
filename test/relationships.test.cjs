@@ -468,6 +468,20 @@ function sampleCrossProjectData() {
   };
 }
 
+test("Ungrouped is hidden when empty and appears when projects are outside groups", (t) => {
+  const data = sampleCrossProjectData();
+  const grouped = makeHarness({ ...data, activeAgent: null, activeWorkspace: null });
+  const groupedTree = grouped.mount();
+  t.after(() => grouped.unmount());
+  const headerTexts = tree => tree.root.findAll(node => node.type === "Text" &&
+    typeof node.props.children === "string" && node.props.children.startsWith("未分组"));
+  assert.equal(headerTexts(groupedTree).length, 0);
+  const ungrouped = makeHarness({ ...data, groups: [], activeAgent: null, activeWorkspace: null });
+  const ungroupedTree = ungrouped.mount();
+  t.after(() => ungrouped.unmount());
+  assert.ok(headerTexts(ungroupedTree).length > 0);
+});
+
 test("relationship-model keeps the model order without a comparator and tracks multi-level guides", () => {
   const load = createLoader();
   const model = load("client/relationship-model.ts");
