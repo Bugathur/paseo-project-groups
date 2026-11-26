@@ -19,16 +19,20 @@ function harness(initial = {}) {
   let active = { agent: null, workspace: null };
   let agents = [agent(w1, "a"), agent(w1, "b"), agent(w2, "a")];
   let tree;
+  let ready = true;
+  let deferred = false;
+  const writes = [];
   const saves = [];
-  const saver = { busy: () => false, save: async (values) => {
+  const saver = { busy: () => writes.length > 0, save: async (values) => {
+    if (deferred) return new Promise(resolve => writes.push({ values, resolve }));
     selected = values.selected; saves.push(selected); return true;
   } };
   const modules = {
     react: React, "react/jsx-runtime": require("react/jsx-runtime"),
     "../shared/settings": { chatTitlesDocument: {} },
-    "./save": { useSettingsSaver: () => saver },
+    "./save": { useSettingsSaver: () => saver, stableJson: JSON.stringify },
     "@getpaseo/plugin/client": {
-      useSettings: () => ({ status: "ready", revision: String(saves.length), values: { selected } }),
+      useSettings: () => ready ? ({ status: "ready", revision: String(saves.length), values: { selected } }) : ({ status: "loading" }),
       useAgents: () => agents.map(a => a.ref),
       useAgent: (reference, selector) => {
         const found = agents.find(a => a.ref.key === reference.key);
@@ -48,6 +52,15 @@ function harness(initial = {}) {
     React.createElement(Read, { workspace: w1 }), React.createElement(Read, { workspace: w2 }));
   return {
     saves,
+    deferSaves() { deferred = true; },
+    async finishSave(success) {
+      await act(async () => {
+        const write = writes.shift();
+        if (success) { selected = write.values.selected; saves.push(selected); }
+        write.resolve(success);
+        tree.update(render());
+      });
+    },
     async mount() { await act(async () => { tree = create(render()); }); },
     async update(index, patch, focus = index) {
       if (index !== null) agents[index] = { ...agents[index], ...patch };
@@ -56,22 +69,61 @@ function harness(initial = {}) {
       await act(async () => { tree.update(render()); });
     },
     async remove(index) { agents.splice(index, 1); await act(async () => tree.update(render())); },
+    async focus(index, workspace = agents[index].workspace) {
+      active = { agent: agents[index].ref, workspace };
+      await act(async () => tree.update(render()));
+    },
+    async settingsReady(value) { ready = value; await act(async () => tree.update(render())); },
     title(workspace) { return tree.root.findAllByType("title").find(n => n.props.workspace === workspace.key).props.value; },
     async unmount() { await act(async () => tree.unmount()); },
     saved() { return JSON.parse(JSON.stringify(selected)); },
   };
 }
 
-test("only starting the focused agent selects a chat; browsing and non-chat tabs retain it", async () => {
+test("focused running chats select immediately; idle and non-chat tabs retain selection", async () => {
   const h = harness(); await h.mount();
   await h.update(0, {}); assert.equal(h.saves.length, 0);
   await h.update(0, { status: "running" }); assert.equal(h.title(w1), "a");
   await h.update(1, {}); assert.equal(h.title(w1), "a");
   await h.update(null, {}, null); assert.equal(h.title(w1), "a");
   await h.update(1, { status: "running" }, null); assert.equal(h.title(w1), "a");
-  await h.update(1, {}); assert.equal(h.title(w1), "a");
+  await h.update(1, {}); assert.equal(h.title(w1), "b");
+  await h.update(0, {}); assert.equal(h.title(w1), "a");
+  await h.update(1, {}); assert.equal(h.title(w1), "b");
   await h.update(1, { status: "idle" });
+  assert.equal(h.title(w1), "b");
   await h.update(1, { status: "running" }); assert.equal(h.title(w1), "b");
+  await h.unmount();
+});
+
+test("running status arriving before workspace focus is not lost", async () => {
+  const h = harness(); await h.mount();
+  await h.update(0, { status: "running" }, null);
+  await h.focus(0, w2); assert.equal(h.title(w1), null);
+  await h.focus(0, w1); assert.equal(h.title(w1), "a");
+  const count = h.saves.length;
+  await h.update(0, { title: "renamed" });
+  assert.equal(h.title(w1), "renamed"); assert.equal(h.saves.length, count);
+  await h.unmount();
+});
+
+test("settings readiness retries selection of the already running focused chat", async () => {
+  const h = harness(); await h.mount();
+  await h.settingsReady(false);
+  await h.update(0, { status: "running" }); assert.equal(h.saves.length, 0);
+  await h.settingsReady(true); assert.equal(h.title(w1), "a");
+  await h.unmount();
+});
+
+test("rapid A-B-A switches keep the newest selection when an older save fails", async () => {
+  const h = harness(); await h.mount(); h.deferSaves();
+  await h.update(0, { status: "running" });
+  await h.update(1, { status: "running" });
+  await h.update(0, {}); assert.equal(h.title(w1), "a");
+  await h.finishSave(true); assert.equal(h.title(w1), "a");
+  await h.finishSave(false); assert.equal(h.title(w1), "a");
+  await h.finishSave(true); assert.equal(h.title(w1), "a");
+  assert.equal(h.saved()[w1.key].id, "a");
   await h.unmount();
 });
 
