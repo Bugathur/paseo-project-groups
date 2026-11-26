@@ -17,6 +17,8 @@ export interface Look {
   boldGroupNames: boolean;
   showProjectIcons: boolean;
   showHostTags: boolean;
+  groupByHost: boolean;
+  compactProjects: boolean;
   showStatusDots: boolean;
   showFoldedStatus: boolean;
   trailing: RowTrailing;
@@ -61,6 +63,8 @@ export function lookFrom(values: AppearanceValues): Look {
     boldGroupNames: values.boldGroupNames,
     showProjectIcons: values.showProjectIcons,
     showHostTags: values.showHostTags,
+    groupByHost: values.groupByHost,
+    compactProjects: values.compactProjects,
     showStatusDots: values.showStatusDots,
     showFoldedStatus: values.showFoldedStatus,
     trailing: values.rowTrailing ?? (values.showDiffStats ? "diff" : "none"),

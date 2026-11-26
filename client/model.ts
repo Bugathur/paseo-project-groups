@@ -84,7 +84,8 @@ export type DropTarget =
   | { kind: "project-after"; groupId: string; projectKey: string }
   | { kind: "into-group"; groupId: string }
   | { kind: "ungroup" }
-  | { kind: "group-at"; index: number };
+  | { kind: "group-at"; index: number; parentId?: string | null }
+  | { kind: "group-into"; groupId: string };
 
 export function groupOfProject(groups: readonly ProjectGroup[], key: string): string | null {
   for (const group of groups) if (group.projects.includes(key)) return group.id;
@@ -99,6 +100,7 @@ function sameGroups(a: readonly ProjectGroup[], b: readonly ProjectGroup[]): boo
       other !== undefined &&
       group.id === other.id &&
       group.name === other.name &&
+      group.parentId === other.parentId &&
       group.projects.length === other.projects.length &&
       group.projects.every((key, position) => other.projects[position] === key)
     );
@@ -111,7 +113,7 @@ export function moveProject(
   key: string,
   target: DropTarget,
 ): ProjectGroup[] | null {
-  if (target.kind === "group-at") return null;
+  if (target.kind === "group-at" || target.kind === "group-into") return null;
   const without = groups.map((group) =>
     group.projects.includes(key)
       ? { ...group, projects: group.projects.filter((item) => item !== key) }
@@ -171,9 +173,16 @@ export function renameGroup(
   return groups.map((group) => (group.id === id ? { ...group, name: trimmed } : group));
 }
 
-/** Deleting a group keeps its projects; they fall back to the ungrouped section. */
+/** Keep projects in the parent (or Ungrouped) and promote child groups one level. */
 export function removeGroup(groups: readonly ProjectGroup[], id: string): ProjectGroup[] {
-  return groups.filter((group) => group.id !== id);
+  const removed = groups.find(group => group.id === id);
+  const parentId = removed?.parentId && removed.parentId !== id && groups.some(group => group.id === removed.parentId)
+    ? removed.parentId : null;
+  return groups.filter(group => group.id !== id).map(group => ({
+    ...group,
+    ...(group.parentId === id ? { parentId } : {}),
+    ...(group.id === parentId ? { projects: [...group.projects, ...(removed?.projects ?? [])] } : {}),
+  }));
 }
 
 /** First unused default name, such as "Group 3". `format` supplies the localized pattern. */

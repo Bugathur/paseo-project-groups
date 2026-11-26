@@ -208,6 +208,8 @@ export function GroupHeader({
   onRename,
   onCancelRename,
   onDelete,
+  onMenu,
+  groupIndex,
 }: {
   group: ProjectGroup;
   /** Ref keys of the group's projects and their sub-projects. */
@@ -222,11 +224,14 @@ export function GroupHeader({
   onRename: (id: string, name: string) => void;
   onCancelRename: () => void;
   onDelete: (id: string) => void;
+  onMenu?: (group: ProjectGroup) => void;
+  groupIndex?: number;
 }) {
   const look = useLook();
   const styles = useRowStyles(view.theme);
   const controller = useDrag();
-  const slotRef = useDragSlot(`g:${group.id}`, { kind: "group", groupId: group.id });
+  const slotRef = useDragSlot(`g:${group.id}`, { kind: "group", groupId: group.id,
+    parentId: group.parentId, index: groupIndex });
   const hover = useHover(view.layout);
   const [initialName, setInitialName] = useState(group.name);
   const draftName = useRef(group.name);
@@ -327,7 +332,7 @@ export function GroupHeader({
         </Text>
         <RowActions
           show={hover.show}
-          slots={3}
+          slots={onMenu ? 4 : 3}
           iconSize={look.icon}
           detail={
             <Text selectable={false} style={styles.detail}>
@@ -335,6 +340,8 @@ export function GroupHeader({
             </Text>
           }
         >
+          {onMenu ? <ActionButton icon="Ellipsis" label={t("project.actions", { name: group.name })}
+            color={muted} size={look.icon} onPress={() => onMenu(group)} onHoverIn={hover.onHoverIn} /> : null}
           <ActionButton
             icon="Palette"
             label={t("group.decorate", { name: group.name })}
@@ -618,6 +625,7 @@ export function WorkspaceRow({
   view,
   onMenu,
   relation,
+  projectPrefix,
 }: {
   reference: WorkspaceRef;
   indent: number;
@@ -630,6 +638,7 @@ export function WorkspaceRow({
     onHover(hovered: boolean): void;
     trailing: ReactNode;
   };
+  projectPrefix?: string;
 }) {
   const look = useLook();
   const styles = useRowStyles(view.theme);
@@ -695,7 +704,7 @@ export function WorkspaceRow({
             active || hover.hovered ? { opacity: 1 } : null,
           ]}
         >
-          {workspace.title}
+          {projectPrefix ? `${projectPrefix}: ${workspace.title}` : workspace.title}
         </Text>
         {branch || labels.length ? (
           <MetaLine hostId={reference.hostId} branch={branch} labels={labels} theme={view.theme} />
@@ -806,7 +815,7 @@ export function ProjectBlock({
   view: PluginSidebarViewProps;
   onToggle: (key: string) => void;
   onMenu: (reference: ProjectRef) => void;
-  renderWorkspace: (workspace: WorkspaceRef, indent: number) => ReactNode;
+  renderWorkspace: (workspace: WorkspaceRef, indent: number, projectPrefix?: string) => ReactNode;
   /** Host name shown after the project name when several hosts are connected; null hides it. */
   hostLabel?: string | null;
   /** Sub-project blocks, hidden while folded. */
@@ -860,6 +869,18 @@ export function ProjectBlock({
     // lands next to the parent.
     <View ref={nested ? undefined : slotRef} style={dragging ? { opacity: 0.4 } : undefined}>
       <View {...handle.pressCapture}>
+        {look.compactProjects && workspaces.length > 0 && !collapsed ? (
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t("project.actions", { name })}
+              onPress={() => { if (!controller.recentlyDropped()) onMenu(reference); }} onLongPress={handle.onLongPress} onPressOut={handle.onPressOut}
+              style={{ padding: 4, marginLeft: look.projectIndent + shift }}>
+              <Icon name="GripVertical" size={look.icon} color={muted} />
+            </Pressable>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              {workspaces.map(workspace => renderWorkspace(workspace, 0, name))}
+            </View>
+          </View>
+        ) : (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t(collapsed ? "common.expand" : "common.collapse", { name })}
@@ -933,10 +954,11 @@ export function ProjectBlock({
             />
           </RowActions>
         </Pressable>
+        )}
       </View>
       {collapsed
         ? null
-        : workspaces.map((workspace) => renderWorkspace(workspace, look.workspaceIndent + shift))}
+         : look.compactProjects ? null : workspaces.map((workspace) => renderWorkspace(workspace, look.workspaceIndent + shift))}
       {collapsed ? null : children}
     </View>
   );
@@ -951,6 +973,34 @@ export function SectionHeading({ title, view }: { title: string; view: PluginSid
       </Text>
     </View>
   );
+}
+
+export function HostSection({ groupId, hostId, title, projects, collapsed, view, onToggle, children }: {
+  groupId: string; hostId: string; title: string; projects: readonly string[];
+  collapsed: boolean; view: PluginSidebarViewProps; onToggle(): void; children: ReactNode;
+}) {
+  const ref = useDragSlot(`host:${JSON.stringify([groupId, hostId])}`, { kind: "host", groupId });
+  const controller = useDrag();
+  const look = useLook();
+  const styles = useRowStyles(view.theme);
+  const inside = (item: PluginWorkspaceSnapshot) => projects.includes(item.project.key) && isListed(item, look);
+  const status = useFoldedStatus(collapsed && look.showFoldedStatus ? inside : null);
+  const active = useHoldsActive(view, collapsed ? inside : null);
+  return <View>
+    <View ref={ref}>
+      <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ expanded: !collapsed }}
+        {...sidebarNavProps({ pgNav: "" })}
+        onPress={() => { if (!controller.recentlyDropped()) onToggle(); }} style={[styles.header, { paddingLeft: look.projectIndent }]}>
+        {active ? <ActiveFill theme={view.theme} inset={4} /> : null}
+        <Icon name={collapsed ? "ChevronRight" : "ChevronDown"} size={look.icon} color={view.theme.colors.foregroundMuted} />
+        <Badged status={status} theme={view.theme} reserve={look.showFoldedStatus}>
+          <Icon name="Server" size={look.icon} color={view.theme.colors.foregroundMuted} />
+        </Badged>
+        <Text numberOfLines={1} style={styles.projectName}>{title}</Text>
+      </Pressable>
+    </View>
+    {collapsed ? null : children}
+  </View>;
 }
 
 export function TextButton({

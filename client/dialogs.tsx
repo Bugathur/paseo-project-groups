@@ -272,7 +272,16 @@ export function ProjectMenuDialog({
           {groups.map((group) => (
             <MenuRow
               key={group.id}
-              label={group.name}
+              label={(() => {
+                const names = [group.name];
+                const seen = new Set([group.id]);
+                let parent = groups.find(item => item.id === group.parentId);
+                while (parent && !seen.has(parent.id)) {
+                  seen.add(parent.id); names.unshift(parent.name);
+                  parent = groups.find(item => item.id === parent!.parentId);
+                }
+                return names.join(" / ");
+              })()}
               icon="Layers"
               checked={current === group.id}
               theme={theme}

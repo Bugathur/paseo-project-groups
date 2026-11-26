@@ -351,17 +351,19 @@ export function RelationshipWorkspace({
   indent,
   sidebar,
   onMenu,
+  projectPrefix,
 }: {
   reference: WorkspaceRef;
   indent: number;
   sidebar: RelationshipActions;
   onMenu: (ref: WorkspaceRef) => void;
+  projectPrefix?: string;
 }) {
   const { model, view } = sidebar;
   const agents = model.byWorkspace.get(reference.key) ?? [];
   const related = agents.filter((agent) => model.parents.has(agent.key) || model.children.has(agent.key));
   if (!related.length) {
-    return <WorkspaceRow reference={reference} indent={indent} view={view} onMenu={onMenu} />;
+    return <WorkspaceRow reference={reference} indent={indent} view={view} onMenu={onMenu} projectPrefix={projectPrefix} />;
   }
   const singleRoot = agents.length === 1;
   const agent = related.find((item) => view.active.agent?.key === item.key) ?? related[0];
@@ -372,6 +374,7 @@ export function RelationshipWorkspace({
     <RelationAnchor agent={agent} sidebar={sidebar}>
       <WorkspaceRow
         reference={reference}
+        projectPrefix={projectPrefix}
         indent={indent}
         view={view}
         onMenu={onMenu}

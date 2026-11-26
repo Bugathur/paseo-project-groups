@@ -2,7 +2,8 @@ import type { DragSubject, DropTarget } from "./model";
 
 /** A row that can receive a drop. Rows register in render order. */
 export type Slot =
-  | { kind: "group"; groupId: string }
+  | { kind: "group"; groupId: string; parentId?: string | null; index?: number }
+  | { kind: "host"; groupId: string }
   | { kind: "project"; projectKey: string; groupId: string | null }
   | { kind: "empty"; groupId: string }
   /** `hostId` is set when Ungrouped is split by host. */
@@ -68,6 +69,7 @@ function hitProject(key: string, sorted: readonly MeasuredSlot[], y: number): Hi
   const slot = item.slot;
   switch (slot.kind) {
     case "group":
+    case "host":
     case "empty":
       return { target: { kind: "into-group", groupId: slot.groupId }, indicator: box(item) };
     case "ungrouped":
@@ -93,6 +95,18 @@ function hitProject(key: string, sorted: readonly MeasuredSlot[], y: number): Hi
 
 function hitGroup(id: string, sorted: readonly MeasuredSlot[], y: number): Hit | null {
   const headers = sorted.filter((item) => item.slot.kind === "group");
+  const destination = nearest(headers, y);
+  if (destination?.slot.kind === "group" && destination.slot.index !== undefined) {
+    if (destination.slot.groupId === id) return null;
+    const ratio = (y - destination.y) / destination.height;
+    if (ratio > 0.25 && ratio < 0.75) return {
+      target: { kind: "group-into", groupId: destination.slot.groupId }, indicator: box(destination),
+    };
+    const after = ratio >= 0.75;
+    return { target: { kind: "group-at", index: destination.slot.index + (after ? 1 : 0),
+      parentId: destination.slot.parentId ?? null },
+      indicator: { kind: "line", y: destination.y + (after ? destination.height : 0) } };
+  }
   const from = headers.findIndex((item) => item.slot.kind === "group" && item.slot.groupId === id);
   if (from < 0) return null;
   const ungrouped = sorted.find((item) => item.slot.kind === "ungrouped");
