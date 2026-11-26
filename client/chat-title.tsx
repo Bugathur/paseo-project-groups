@@ -1,29 +1,24 @@
-import { useAgent, useAgents, useSettings, type AgentRef, type PluginSidebarViewProps } from "@getpaseo/plugin/client";
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useAgent, useSettings, type AgentRef, type PluginSidebarViewProps } from "@getpaseo/plugin/client";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { chatTitlesDocument } from "../shared/settings";
-import { useSettingsSaver } from "./save";
+import { stableJson, useSettingsSaver } from "./save";
 
 type Selection = Record<string, AgentRef>;
 const SelectionContext = createContext<Selection>({});
 
-/** Navigation alone, including switching to an already running chat, is not a start. */
-export function didStart(previous: string | null, current: string | undefined): boolean {
-  return previous !== null && previous !== "running" && current === "running";
-}
-
-function Observe({ reference, active, select, newlyAdded }: {
-  reference: AgentRef; active: PluginSidebarViewProps["active"];
-  newlyAdded: boolean;
+/** Recheck the whole condition when focus, status or settings readiness changes. */
+function Observe({ reference, workspaceKey, ready, select }: {
+  reference: AgentRef; workspaceKey: string | null;
+  ready: boolean;
   select(workspace: string, agent: AgentRef): void;
 }) {
   const agent = useAgent(reference);
-  const previous = useRef<string | null>(newlyAdded ? "initializing" : null);
+  const status = agent?.status;
+  const agentWorkspaceKey = agent?.workspace.key;
   useEffect(() => {
-    const started = didStart(previous.current, agent?.status);
-    previous.current = agent?.status ?? null;
-    if (started && agent && active.agent?.key === reference.key &&
-        active.workspace?.key === agent.workspace.key) select(agent.workspace.key, reference);
-  }, [agent, active.agent, active.workspace, reference, select]);
+    if (ready && status === "running" && agentWorkspaceKey && workspaceKey === agentWorkspaceKey)
+      select(agentWorkspaceKey, reference);
+  }, [ready, status, agentWorkspaceKey, workspaceKey, reference, select]);
   return null;
 }
 
@@ -32,25 +27,32 @@ export function ChatTitles({ active, children }: {
 }) {
   const state = useSettings(chatTitlesDocument);
   const saver = useSettingsSaver(state);
-  const agents = useAgents();
-  const initialKeys = useRef(new Set(agents.map((agent) => agent.key)));
   const [pending, setPending] = useState<Selection | null>(null);
   const selected = pending ?? (state.status === "ready" ? state.values.selected : {});
   const latest = useRef(selected);
   latest.current = selected;
   const revision = state.status === "ready" ? state.revision : null;
-  useEffect(() => { if (!saver.busy()) setPending(null); }, [revision, saver]);
-  const select = (workspace: string, agent: AgentRef) => {
-    if (state.status !== "ready" || latest.current[workspace]?.key === agent.key) return;
+  useEffect(() => {
+    if (!saver.busy() && state.status === "ready" &&
+        stableJson(state.values.selected) === stableJson(latest.current)) setPending(null);
+  }, [revision, saver, state]);
+  const ready = state.status === "ready";
+  const selectionVersion = useRef(0);
+  const select = useCallback((workspace: string, agent: AgentRef) => {
+    if (!ready || latest.current[workspace]?.key === agent.key) return;
+    const version = ++selectionVersion.current;
     const next = { ...latest.current, [workspace]: agent };
     latest.current = next;
     setPending(next);
     void saver.save({ selected: next }).then((saved) => {
-      if (!saved) setPending(null);
-    }).catch(() => setPending(null));
-  };
+      if (!saved && selectionVersion.current === version) setPending(null);
+    }).catch(() => {
+      if (selectionVersion.current === version) setPending(null);
+    });
+  }, [ready, saver]);
   return <SelectionContext.Provider value={selected}>
-    {agents.map((reference) => <Observe key={reference.key} reference={reference} active={active} select={select} newlyAdded={!initialKeys.current.has(reference.key)} />)}
+    {active.agent && <Observe key={active.agent.key} reference={active.agent}
+      workspaceKey={active.workspace?.key ?? null} ready={ready} select={select} />}
     {children}
   </SelectionContext.Provider>;
 }
