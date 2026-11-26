@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/topar12/paseo-project-groups.git"
+    "url": "git+https://github.com/Bugathur/paseo-project-groups.git"
   },
   "files": [
     "paseo-plugin.json",

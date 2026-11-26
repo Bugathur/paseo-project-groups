@@ -2,6 +2,10 @@
 
 Sort Paseo sidebar projects into groups you can drag, fold and color.
 
+This is the [Bugathur fork](https://github.com/Bugathur/paseo-project-groups) of
+[topar12/paseo-project-groups](https://github.com/topar12/paseo-project-groups),
+with a last-working-chat title mode and a development workflow for OpenCode with OpenAI GPT.
+
 **Languages:** English, Korean (한국어), Simplified Chinese (简体中文)
 
 ![Project groups](assets/thumbnail.png)
@@ -13,6 +17,9 @@ Find Project groups on the Plugins page in Paseo, or run:
 ```bash
 paseo plugin add topar12/project-groups
 ```
+
+That installs the upstream release. To use this fork, follow
+[Local installation / updating this fork](#local-installation--updating-this-fork).
 
 ## Turn it on
 
@@ -91,13 +98,28 @@ Uninstalling the plugin deletes the saved groups. To get a new version, use `pas
 
 ## Development
 
+Use Node.js 24 (the version used in CI) and npm.
+
 ```bash
-npm install
+npm ci
 npm run typecheck
 npm test
-paseo plugin install "$PWD"
+paseo plugin install "$PWD" --id project-groups
 paseo plugin reload project-groups
 ```
+
+### OpenCode + OpenAI GPT
+
+Start `opencode` from the repository root. OpenCode reads [`AGENTS.md`](AGENTS.md)
+for the code map, checks, and compatibility rules, including this fork's chat-title behavior.
+
+In OpenCode, run `/connect` to connect your OpenAI account, then `/models` to
+select an available OpenAI GPT model. Authentication and model selection are
+managed by your OpenCode setup; no API keys belong in this repository.
+
+The plugin itself uses Paseo's agent API and does not require a particular AI
+provider. To check UI changes, reload the installed local plugin in Paseo;
+this repository has no standalone development-server or build script.
 
 ## License
 
