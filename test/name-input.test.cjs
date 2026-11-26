@@ -43,6 +43,7 @@ function loadClient(file, host = {}) {
       Modal,
       useToast: () => ({ show: noop, error: noop }),
     },
+    "./chat-title": { useChatTitle: () => null },
     "./i18n": { useT: () => (key) => key },
     "./model": { mostUrgent: () => "done", compareWorkspaceTimes: () => () => 0, compactTimeAgo: () => "" },
     "./project-icon": { ProjectIcon: "ProjectIcon" },

@@ -51,7 +51,7 @@ function loadMenu(values) {
     "../shared/settings": {
       appearanceDocument: {},
       WORKSPACE_SORTS: ["name", "created", "lastPrompt"],
-      WORKSPACE_TITLES: ["title", "branch"],
+      WORKSPACE_TITLES: ["title", "branch", "chat"],
     },
     "./i18n": { useT: () => (key) => key },
     "./look": {

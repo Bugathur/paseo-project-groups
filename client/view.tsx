@@ -77,6 +77,7 @@ import { activeFamily, agentRelationships, relationshipFamilies } from "./relati
 import { RelationshipRail, useRelationshipRail } from "./relationship-rail";
 import { RelationshipWorkspace, RelationshipsList, type RelationshipActions } from "./relationships";
 import { bindSidebarKeys } from "./web";
+import { ChatTitles } from "./chat-title";
 
 const UNGROUPED_KEY = "u";
 const WEB = Platform.OS === "web";
@@ -347,7 +348,7 @@ export function GroupsView(view: PluginSidebarViewProps) {
   );
   return (
     <LookContext.Provider value={look}>
-      <GroupsList {...view} />
+      <ChatTitles active={view.active}><GroupsList {...view} /></ChatTitles>
     </LookContext.Provider>
   );
 }

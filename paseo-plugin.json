@@ -14,7 +14,7 @@
     "assets/screenshot-settings.png"
   ],
   "requirements": {
-    "paseo": ">=0.16.0"
+    "paseo": ">=0.17.2"
   },
   "translations": {
     "ko": {
