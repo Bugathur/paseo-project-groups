@@ -6,10 +6,11 @@ import type { Decoration, DecorationKind, DecorationsValues } from "../shared/se
 import { useT } from "./i18n";
 import { searchIcons } from "./lucide-names";
 import { firstGraphemes } from "./text";
+import { ColorPicker } from "./color-picker";
 
 type Theme = PluginSidebarViewProps["theme"];
 
-/** Mid-tone colors that stay readable as text on both light and dark sidebars. */
+/** Original mid-tones followed by light and dark variants of each color family. */
 export const PALETTE = [
   { color: "#E5484D", name: "red" },
   { color: "#F76B15", name: "orange" },
@@ -22,6 +23,28 @@ export const PALETTE = [
   { color: "#D6409F", name: "pink" },
   { color: "#AD7F58", name: "brown" },
   { color: "#8B8D98", name: "gray" },
+  { color: "#FF9592", name: "red" },
+  { color: "#FFB381", name: "orange" },
+  { color: "#F5D90A", name: "yellow" },
+  { color: "#8ECEAA", name: "green" },
+  { color: "#83CDC1", name: "teal" },
+  { color: "#8EC8F6", name: "blue" },
+  { color: "#A3B5EF", name: "indigo" },
+  { color: "#D1AFEC", name: "purple" },
+  { color: "#F3A6D8", name: "pink" },
+  { color: "#DBB594", name: "brown" },
+  { color: "#CDCED6", name: "gray" },
+  { color: "#B4232B", name: "red" },
+  { color: "#B94700", name: "orange" },
+  { color: "#9E6C00", name: "yellow" },
+  { color: "#18794E", name: "green" },
+  { color: "#087F73", name: "teal" },
+  { color: "#006ADC", name: "blue" },
+  { color: "#2F4094", name: "indigo" },
+  { color: "#663894", name: "purple" },
+  { color: "#A32375", name: "pink" },
+  { color: "#815E46", name: "brown" },
+  { color: "#60646C", name: "gray" },
 ] as const;
 
 /** Lucide names offered in the picker. Search reaches the rest; any emoji works as well. */
@@ -299,13 +322,16 @@ export function DecorateDialog({
               <Swatch
                 key={item.color}
                 color={item.color}
-                label={t(`decorate.colors.${item.name}`)}
+                label={`${t(`decorate.colors.${item.name}`)} ${item.color}`}
                 selected={draft.color === item.color}
                 theme={theme}
                 onPress={() => setDraft((current) => ({ ...current, color: item.color }))}
               />
             ))}
           </View>
+          <ColorPicker color={draft.color}
+            onChange={(color) => setDraft((current) => ({ ...current, color }))}
+            foreground={theme.colors.foreground} border={theme.colors.border} />
         </View>
 
         {withIcon ? (
