@@ -990,13 +990,19 @@ export function HostSection({ groupId, hostId, title, projects, collapsed, view,
     <View ref={ref}>
       <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ expanded: !collapsed }}
         {...sidebarNavProps({ pgNav: "" })}
-        onPress={() => { if (!controller.recentlyDropped()) onToggle(); }} style={[styles.header, { paddingLeft: look.projectIndent }]}>
+        onPress={() => { if (!controller.recentlyDropped()) onToggle(); }} style={[styles.header, {
+          paddingLeft: look.projectIndent,
+          backgroundColor: view.theme.colors.surface1,
+          borderRadius: 6,
+        }]}>
         {active ? <ActiveFill theme={view.theme} inset={4} /> : null}
         <Icon name={collapsed ? "ChevronRight" : "ChevronDown"} size={look.icon} color={view.theme.colors.foregroundMuted} />
         <Badged status={status} theme={view.theme} reserve={look.showFoldedStatus}>
-          <Icon name="Server" size={look.icon} color={view.theme.colors.foregroundMuted} />
+          <Icon name="Server" size={look.icon} color={view.theme.colors.foreground} />
         </Badged>
-        <Text numberOfLines={1} style={styles.projectName}>{title}</Text>
+        <Text numberOfLines={1} style={[styles.projectName, {
+          fontWeight: "600", color: view.theme.colors.foreground,
+        }]}>{title}</Text>
       </Pressable>
     </View>
     {collapsed ? null : children}
